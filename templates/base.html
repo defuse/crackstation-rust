@@ -1,0 +1,106 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" >
+<head>
+<title>{{ ctx.page_info.title_or_default() }}</title>
+<meta name="description" content="{{ ctx.page_info.description_or_default() }}" />
+<meta name="keywords" content="{{ ctx.page_info.keywords_or_default() }}" />
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<link rel="stylesheet" media="all" type="text/css" href="/css/mainmenu2.css" />
+<link rel="stylesheet" media="all" type="text/css" href="/css/main.css" />
+<link rel="stylesheet" media="all" type="text/css" href="/css/style.css" />
+{% if ctx.is_home() %}
+<script src='https://www.google.com/recaptcha/api.js'></script>
+{% endif %}
+<!--[if !IE 7]>
+	<style type="text/css">
+		#wrap {display:table;height:100%}
+	</style>
+<![endif]-->
+</head>
+<body{% if ctx.is_home() %} style="background:white;"{% endif %} >
+<div id="wrap">
+
+<!-- This menuing system was made by Steve Gibson at GRC.COM
+            see more at http://www.grc.com/menudemo.htm -->
+
+<div class="menuminwidth0"><div class="menuminwidth1"><div class="menuminwidth2">
+<div id="masthead">
+    <div style="font-size:30px;"><img src="/images/1by1.gif" alt="CrackStation" /></div>
+    <div id="sm">
+        <a href="https://defuse.ca/" title="Defuse Security">Defuse.ca</a>
+        &nbsp;&middot;&nbsp;
+        <a href="https://twitter.com/defusesec" title="Follow @DefuseSec on twitter!">
+            <img id="twitterlogo" src="/images/twitter.png" alt="Follow me on twitter!" height="25" width="30" />
+            Twitter
+        </a>
+    </div>
+</div>
+
+<div class="menu">
+
+<ul>
+    <li class="headerlink" ><a href="/">CrackStation<img class="downimg" src="/images/downarrow.gif" alt="&#9660;"/><!--[if gt IE 6]><!--></a><!--<![endif]--><!--[if lt IE 7]><table border="0" cellpadding="0" cellspacing="0"><tr><td><![endif]-->
+        <ul class="leftbutton">
+            <li><a href="/">&nbsp;Free Hash Cracker</a></li>
+            <li><a href="crackstation-wordlist-password-cracking-dictionary.htm">&nbsp;Wordlist Download</a></li>
+            <li><a href="/about-us.htm">&nbsp;About Us</a></li>
+            <li><a href="/contact-us.htm">&nbsp;Contact Us</a></li>
+            <li><a href="/legal-privacy.htm">&nbsp;ToS &amp; Privacy Policy</a></li>
+        </ul>
+        <!--[if lte IE 6]></td></tr></table></a><![endif]-->
+    </li>
+</ul>
+
+
+<ul>
+    <li class="headerlink" ><a href="/hashing-security.htm">Password Hashing Security<img class="downimg" src="/images/downarrow.gif" alt="&#9660;"/><!--[if gt IE 6]><!--></a><!--<![endif]--><!--[if lt IE 7]><table border="0" cellpadding="0" cellspacing="0"><tr><td><![endif]-->
+        <!--[if lte IE 6]></td></tr></table></a><![endif]-->
+    </li>
+</ul>
+
+<ul>
+    <li class="headerlink" ><a href="https://defuse.ca/">Defuse Security<img class="downimg" src="/images/downarrow.gif" alt="&#9660;"/><!--[if gt IE 6]><!--></a><!--<![endif]--><!--[if lt IE 7]><table border="0" cellpadding="0" cellspacing="0"><tr><td><![endif]-->
+        <!--[if lte IE 6]></td></tr></table></a><![endif]-->
+    </li>
+</ul>
+
+</div> <!-- close "menu" div -->
+<hr style="display:none" />
+</div></div></div> <!-- close the "minwidth" wrappers -->
+<!-- End of menu -->
+
+<!--[if !IE]>-->
+<div id="undergrad"></div>
+<!--<![endif]-->
+
+<!--[If gt IE 6]>
+<div id="undergrad"></div>
+<![endif]-->
+
+<div id="content">
+{% block content %}{% endblock %}
+</div>
+
+</div> <!-- Wrap -->
+    <div id="footerwrapper">
+    <div id="footerborder"></div>
+    <div id="footer">
+    <table>
+        <tr>
+            <th>Page Hits:</th>
+            <td>{{ ctx.hit_counts.page_hits }}</td>
+        </tr>
+        <tr>
+            <th>Unique Hits:</th>
+            <td>{{ ctx.hit_counts.unique_hits }}</td>
+        </tr>
+    </table>
+<a rel="license" href="http://creativecommons.org/licenses/by-sa/3.0/deed.en_US"><img alt="Creative Commons License" style="border-width:0; vertical-align: bottom;" src="/images/cc-by-sa.png" /></a>
+<a href="https://defuse.ca/">Defuse Security</a> |
+    <a href="https://z.cash/">Zcash</a> |
+    <a href="https://defuse.ca/pastebin.htm">Secure Pastebin</a> |
+    <a href="https://github.com/defuse/crackstation">Source Code</a>
+    </div> <!-- end footer -->
+    </div> <!-- footerwrapper -->
+</body>
+</html>

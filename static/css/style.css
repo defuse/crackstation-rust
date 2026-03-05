@@ -1,0 +1,135 @@
+/*
+ * CrackStation, a web-based hash cracking website.
+ * Copyright (C) 2013  Taylor Hornby
+ * 
+ * This file is part of CrackStation.
+ * 
+ * CrackStation is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as
+ * published by the Free Software Foundation, either version 3 of the
+ * License, or (at your option) any later version.
+ * 
+ * CrackStation is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ * 
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+/* Custom stuff */
+
+ul, ol {
+    margin-left: 30px;
+}
+
+.crackresults {
+    margin-top: 10px;
+}
+
+.results
+{
+	width: 100%;
+}
+
+.results th
+{
+    text-align: center;
+}
+
+.results td
+{
+	text-align:left;
+}
+
+
+.fail
+{
+    background-color: #FF0000;
+}
+
+.results td
+{
+	padding:5px;
+    font-family: monospace;
+    border: solid black 1px;
+}
+
+.suc
+{
+	background-color: #00FF00;
+}
+
+.part
+{
+    background-color: #FFFF00;
+}
+
+.ic{
+    color:#000000;
+    font-family: monospace;
+}
+
+.sca {
+    display: block;
+    height: 100%;
+    width: 100%;
+}
+
+.shortcuts{
+    width:100%;
+    color: #000000;
+}
+
+.shortcuts td {
+    background-color: #F0F0F0;
+    border: solid 1px black;
+    padding: 5px;
+    font-weight: bold;
+    color: #000000;
+}
+
+.shortcuts td a{
+    font-weight:normal;
+    text-decoration: none;
+    color: #000000;
+}
+
+.shortcuts td a:visited {
+    color: #000000;
+}
+.shortcuts td:hover {
+    background-color: #DDDDDD;
+}
+
+#rnglist {
+    margin: 0 auto;
+}
+
+#rnglist td {
+    border: solid 1px #AAAAAA;
+    padding: 10px;
+}
+
+.passcrack{
+    padding: 10px; 
+    font-family: monospace;
+    color: #c0c0c0;
+    background-color: #000000;
+    border-radius: 15px;
+    box-shadow: 6px 6px 4px 2px #888 ;
+    background-image: url('/images/code-top.png');
+    background-repeat: repeat-x;
+}
+
+.downloaddiv {
+    padding: 10px;
+    font-size: 16pt;
+    text-align: center;
+}
+
+.downloadlink {
+    color: black;
+    padding: 5px;
+}

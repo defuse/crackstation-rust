@@ -1,0 +1,22 @@
+# Development environment configuration for crackstation-rust.
+# These credentials match dev/01-init.sql — do not use in production.
+#
+# Usage:
+#   cp dev/dotenv-example .env
+#   set -a && source .env && set +a
+#   cargo run
+
+LISTEN_ADDR=0.0.0.0:3000
+
+# Database connection (password matches dev/01-init.sql)
+PHPCOUNT_DATABASE_URL=mysql://phpcount:dev_phpcount_pass@localhost:3306/phpcount
+
+# reCAPTCHA secret key (Google's test key — always passes)
+# See: https://developers.google.com/recaptcha/docs/faq#id-like-to-run-automated-tests-with-recaptcha.-what-should-i-do
+RECAPTCHA_SECRET_KEY=6LeIxAcTAAAAAGG-vFI1TnRWxMZNFuojJ4WifJWe
+
+# Path to hash lookup index files (built by dev/setup-test-data.sh)
+CRACKING_DIR=dev/cracking
+
+# Logging (uncomment for debug output)
+# RUST_LOG=crackstation_rust=debug,tower_http=debug

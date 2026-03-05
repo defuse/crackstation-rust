@@ -1,0 +1,50 @@
+[package]
+name = "crackstation-rust"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+# Web framework
+axum = "0.7"
+tokio = { version = "1", features = ["full"] }
+tower = "0.5"
+tower-http = { version = "0.6", features = ["fs", "catch-panic"] }
+
+# Templating (compile-time checked)
+askama = "0.12"
+askama_axum = "0.4"
+
+# Database
+sqlx = { version = "0.8", features = ["runtime-tokio-rustls", "mysql"] }
+
+# Hash lookups
+preimage = { path = "../preimage", default-features = false }
+
+# HTTP client (for reCAPTCHA verification)
+reqwest = { version = "0.12", features = ["json"] }
+
+# Crypto (for phpcount SHA256)
+sha2 = "0.10"
+hex = "0.4"
+
+# Serialization (for reCAPTCHA response)
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# Error handling
+anyhow = "1"
+
+# Misc
+bytes = "1"
+libc = "0.2"
+form_urlencoded = "1"
+
+# Constant-time comparison for captcha bypass secret
+subtle = "2.6"
+
+[build-dependencies]
+glob = "0.3"
