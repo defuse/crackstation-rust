@@ -9,6 +9,7 @@ use crate::app_state::AppState;
 use crate::context::PageContext;
 use crate::cracking::{self, CrackResult};
 use crate::handler::{BoxFuture, PageHandler, PostBody};
+use crate::libs;
 
 pub struct Handler;
 
@@ -43,20 +44,32 @@ impl PageHandler for Handler {
                 .unwrap_or_default();
 
             // Check captcha: either verify with Google or accept bypass header
-            let captcha_ok = if is_captcha_bypassed(&ctx) {
-                true
-            } else {
-                verify_recaptcha(&recaptcha_response, &ctx.client_ip).await
-            };
-
-            if !captcha_ok {
-                return HomePage {
-                    ctx,
-                    results: None,
-                    error: Some("Incorrect captcha. Please try again.".to_string()),
-                    submitted_hashes: hashes_raw,
+            if !is_captcha_bypassed(&ctx) {
+                match libs::recaptcha::verify(&recaptcha_response, &ctx.client_ip).await {
+                    Ok(true) => {} // passed
+                    Ok(false) => {
+                        return HomePage {
+                            ctx,
+                            results: None,
+                            error: Some("Incorrect captcha. Please try again.".to_string()),
+                            submitted_hashes: hashes_raw,
+                        }
+                        .into_response();
+                    }
+                    Err(e) => {
+                        tracing::error!("reCAPTCHA verification failed: {:#}", e);
+                        return HomePage {
+                            ctx,
+                            results: None,
+                            error: Some(
+                                "Could not verify captcha (server error). Please try again."
+                                    .to_string(),
+                            ),
+                            submitted_hashes: hashes_raw,
+                        }
+                        .into_response();
+                    }
                 }
-                .into_response();
             }
 
             // Parse hashes: normalize line endings, split, trim, filter empty
@@ -117,44 +130,6 @@ fn is_captcha_bypassed(ctx: &PageContext) -> bool {
 
     let received_hash = hex::encode(Sha256::digest(bypass_header.as_bytes()));
     received_hash.as_bytes().ct_eq(CAPTCHA_BYPASS_KEY_HASH.as_bytes()).into()
-}
-
-/// Verify reCAPTCHA response with Google's API.
-async fn verify_recaptcha(token: &str, remote_ip: &str) -> bool {
-    let secret = match std::env::var("RECAPTCHA_SECRET_KEY") {
-        Ok(s) => s,
-        Err(_) => {
-            tracing::error!("RECAPTCHA_SECRET_KEY not set");
-            return false;
-        }
-    };
-
-    let client = reqwest::Client::new();
-    let resp = client
-        .post("https://www.google.com/recaptcha/api/siteverify")
-        .form(&[
-            ("secret", secret.as_str()),
-            ("response", token),
-            ("remoteip", remote_ip),
-        ])
-        .send()
-        .await;
-
-    match resp {
-        Ok(r) => {
-            match r.json::<serde_json::Value>().await {
-                Ok(json) => json["success"].as_bool().unwrap_or(false),
-                Err(e) => {
-                    tracing::error!("Failed to parse reCAPTCHA response: {}", e);
-                    false
-                }
-            }
-        }
-        Err(e) => {
-            tracing::error!("reCAPTCHA verification request failed: {}", e);
-            false
-        }
-    }
 }
 
 #[derive(Template)]
