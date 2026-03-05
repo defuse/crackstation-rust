@@ -8,13 +8,13 @@ use super::{alias, page, PageInfo};
 /// Registry for all pages on crackstation.net. Matches PHP's URLParse.php routes.
 pub static PAGE_REGISTRY: LazyLock<HashMap<&'static str, PageInfo>> = LazyLock::new(|| {
     let pages: &[PageInfo] = &[
-        // ===== Home page =====
+        // ===== Home page (PHP specifies no metadata — uses defaults) =====
         page! {
             handler: home,
             slug: "",
-            title: "CrackStation - Online Password Hash Cracking - MD5, SHA1, Linux, Rainbow Tables, etc.",
-            description: "CrackStation uses massive pre-computed lookup tables to crack password hashes. Free hash cracking. Supports MD5, SHA1, SHA256, NTLM, and more.",
-            keywords: "crack, password, hash, md5, sha1, sha256, sha512, ntlm, lm, rainbow, table, online, free, lookup, decrypt",
+            title: "",
+            description: "",
+            keywords: "",
             legacy_hit_count_id: "pages/home.php",
         },
 
@@ -24,13 +24,13 @@ pub static PAGE_REGISTRY: LazyLock<HashMap<&'static str, PageInfo>> = LazyLock::
         alias!("index.html" => ""),
         alias!("index.php" => ""),
 
-        // ===== Content pages =====
+        // ===== Content pages (metadata matches PHP's URLParse.php exactly) =====
         page! {
             handler: hashing_security,
             slug: "hashing-security",
-            title: "Salted Password Hashing - Doing it Right",
-            description: "Salted Password Hashing - Doing it Right. A guide to properly implementing password hashing.",
-            keywords: "password, hash, hashing, salted, security, how to, tutorial, guide, secure, bcrypt, scrypt, pbkdf2",
+            title: "Secure Salted Password Hashing - How to do it Properly",
+            description: "How to hash passwords properly using salt. Why hashes should be salted and how to use salt correctly.",
+            keywords: "salt, salted hashing, secure password hashing, password hashing, proper way to hash passwords",
             legacy_hit_count_id: "pages/hashing-security.php",
         },
         page! {
@@ -44,55 +44,57 @@ pub static PAGE_REGISTRY: LazyLock<HashMap<&'static str, PageInfo>> = LazyLock::
         page! {
             handler: downloads,
             slug: "downloads",
-            title: "Downloads - CrackStation",
-            description: "CrackStation downloads.",
-            keywords: "",
+            title: "CrackStation Tools & Downloads",
+            description: "Free tools & Downloads provided by CrackStation",
+            keywords: "hash tools, hash cracking, password cracking",
             legacy_hit_count_id: "pages/downloads.php",
         },
         page! {
             handler: contact,
             slug: "contact-us",
-            title: "Contact Us - CrackStation",
-            description: "Contact CrackStation.",
-            keywords: "",
+            title: "CrackStation Contact",
+            description: "Instructions for contacting CrackStation",
+            keywords: "crackstation contact",
             legacy_hit_count_id: "pages/contactus.php",
         },
+        // NOTE: PHP has title "CrackStation Contact" and keywords "crackstation contact"
+        // for this page too — appears to be a copy-paste error, but we match it exactly.
         page! {
             handler: about,
             slug: "about-us",
-            title: "About Us - CrackStation",
-            description: "About CrackStation.",
-            keywords: "",
+            title: "CrackStation Contact",
+            description: "What CrackStation is and why we exist",
+            keywords: "crackstation contact",
             legacy_hit_count_id: "pages/aboutus.php",
         },
         page! {
             handler: wordlist,
             slug: "crackstation-wordlist-password-cracking-dictionary",
-            title: "CrackStation's Password Cracking Dictionary (Pay What You Want!)",
-            description: "CrackStation's password cracking wordlist. 1.5 billion passwords for download.",
-            keywords: "wordlist, dictionary, password, cracking, download, free, large, big",
+            title: "CrackStation's Password Cracking Dictionary (Pay what you want!)",
+            description: "Download CrackStation's password cracking wordlist.",
+            keywords: "password cracking wordlist, biggest password cracking wordlist, cracking dictionary",
             legacy_hit_count_id: "pages/buy-crackstation-wordlist-cracking-dictionary.php",
         },
         page! {
             handler: legal_privacy,
             slug: "legal-privacy",
-            title: "Terms of Service and Privacy Policy - CrackStation",
-            description: "CrackStation Terms of Service and Privacy Policy.",
-            keywords: "",
+            title: "CrackStation - Legal and Privacy",
+            description: "CrackStation.net's privacy policy",
+            keywords: "hash cracking legal, penetration testing, password security",
             legacy_hit_count_id: "pages/legal-privacy.php",
         },
         page! {
             handler: thank_you,
             slug: "thank-you",
-            title: "Thank You! - CrackStation",
-            description: "Thank you for your purchase!",
+            title: "Thanks!",
+            description: "Donation Confirmation Page",
             keywords: "",
             legacy_hit_count_id: "pages/thank-you.php",
         },
         page! {
             handler: not_found,
             slug: "404",
-            title: "Page Not Found - CrackStation",
+            title: "File Not Found",
             description: "",
             keywords: "",
             legacy_hit_count_id: "pages/404.php",

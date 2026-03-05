@@ -146,15 +146,15 @@ impl PageInfo {
     }
 }
 
-// Default metadata values (matching PHP)
+// Default metadata values (matching PHP's URLParse.php)
 pub const DEFAULT_TITLE: &str = "CrackStation - Online Password Hash Cracking - MD5, SHA1, Linux, Rainbow Tables, etc.";
-pub const DEFAULT_META_DESCRIPTION: &str = "CrackStation - Online Password Hash Cracking";
-pub const DEFAULT_META_KEYWORDS: &str = "crack, password, hash, md5, sha1, sha256, rainbow, table, online, free";
+pub const DEFAULT_META_DESCRIPTION: &str = "Crackstation is the most effective hash cracking service. We crack: MD5, SHA1, SHA2, WPA, and much more...";
+pub const DEFAULT_META_KEYWORDS: &str = "md5 cracking, sha1 cracking, hash cracking, password cracking";
 
 /// Page info for the 404 Not Found page
 pub static NOT_FOUND_PAGE_INFO: PageInfo = PageInfo {
     slug: "404",
-    title: "Page Not Found - CrackStation",
+    title: "File Not Found",
     ..PageInfo::DEFAULT
 };
 
