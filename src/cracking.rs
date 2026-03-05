@@ -6,7 +6,7 @@ use preimage::hashing::{
     Lm, Ntlm, MySql41, Md5Md5, Md5, Sha1, Md2, Md4,
     Sha256, Sha224, Sha384, Sha512, Whirlpool, Ripemd160, QubesV31,
 };
-use preimage::{PreimageOracle, LookupMatch};
+use preimage::{PreimageOracle, HashResult, LookupMatch};
 
 /// A cracked hash result for one input hash.
 pub struct CrackResult {
@@ -77,115 +77,55 @@ pub fn init_oracle(cracking_dir: &Path) -> PreimageOracle {
     oracle
 }
 
-/// Check whether a string looks like a valid hash in hex format.
-///
-/// Matches PHP's CrackHashes validation: must be at least 16 hex characters,
-/// even length, and contain only hex digits.
-fn is_valid_hash_hex(s: &str) -> bool {
-    s.len() >= 16 && s.len() % 2 == 0 && s.bytes().all(|b| b.is_ascii_hexdigit())
-}
-
 /// Crack a list of hashes using the oracle.
 ///
 /// Returns one CrackResult per input hash, in the same order.
 /// Invalid hash formats (non-hex, odd-length, too short) are returned with
-/// `format_error: true` and are not sent to the oracle.
+/// `format_error: true` — validation is handled by the oracle.
 pub fn crack_hashes(oracle: &PreimageOracle, hashes: &[String]) -> Vec<CrackResult> {
-    // Separate valid hashes from format errors, preserving original indices.
-    let mut valid_indices = Vec::new();
-    let mut valid_hashes = Vec::new();
-    let mut output: Vec<Option<CrackResult>> = (0..hashes.len()).map(|_| None).collect();
+    let hash_refs: Vec<&str> = hashes.iter().map(|h| h.as_str()).collect();
+    let results = oracle.crack(&hash_refs, true); // early_exit = true (matches PHP)
 
-    for (i, hash) in hashes.iter().enumerate() {
-        if is_valid_hash_hex(hash) {
-            valid_indices.push(i);
-            valid_hashes.push(hash.as_str());
-        } else {
-            output[i] = Some(CrackResult {
-                hash: hash.clone(),
+    results
+        .into_iter()
+        .map(|result| match result {
+            HashResult::InvalidFormat { input } => CrackResult {
+                hash: input,
                 matches: Vec::new(),
                 format_error: true,
-            });
-        }
-    }
-
-    // Crack the valid hashes as a batch.
-    let results = oracle.crack(&valid_hashes, true); // early_exit = true (matches PHP)
-
-    for (idx, result) in valid_indices.into_iter().zip(results.into_iter()) {
-        let matches = result
-            .matches
-            .iter()
-            .map(|m| {
-                let plaintext = m.lookup_match.plaintext_lossy().into_owned();
-                let (is_full, full_hash) = match &m.lookup_match {
-                    LookupMatch::Full { .. } => (true, None),
-                    LookupMatch::Partial { recomputed_hash, .. } => {
-                        (false, Some(hex::encode(recomputed_hash)))
-                    }
-                };
-                let algorithm_name = match &m.lookup_match {
-                    LookupMatch::Full { algorithm, .. }
-                    | LookupMatch::Partial { algorithm, .. } => {
-                        algorithm.name().to_string()
-                    }
-                };
-                CrackMatch {
-                    plaintext,
-                    algorithm_name,
-                    is_full_match: is_full,
-                    full_hash,
-                }
-            })
-            .collect();
-
-        output[idx] = Some(CrackResult {
-            hash: result.queried_hash,
-            matches,
-            format_error: false,
-        });
-    }
-
-    output
-        .into_iter()
-        .map(|r| r.expect("every hash index must be populated"))
+            },
+            HashResult::Lookup {
+                queried_hash,
+                matches,
+            } => CrackResult {
+                hash: queried_hash,
+                matches: matches
+                    .iter()
+                    .map(|m| {
+                        let plaintext = m.lookup_match.plaintext_lossy().into_owned();
+                        let (is_full, full_hash) = match &m.lookup_match {
+                            LookupMatch::Full { .. } => (true, None),
+                            LookupMatch::Partial { recomputed_hash, .. } => {
+                                (false, Some(hex::encode(recomputed_hash)))
+                            }
+                        };
+                        let algorithm_name = match &m.lookup_match {
+                            LookupMatch::Full { algorithm, .. }
+                            | LookupMatch::Partial { algorithm, .. } => {
+                                algorithm.name().to_string()
+                            }
+                        };
+                        CrackMatch {
+                            plaintext,
+                            algorithm_name,
+                            is_full_match: is_full,
+                            full_hash,
+                        }
+                    })
+                    .collect(),
+                format_error: false,
+            },
+        })
         .collect()
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn valid_hash_hex_accepts_valid_hashes() {
-        // 16 hex chars (minimum)
-        assert!(is_valid_hash_hex("0123456789abcdef"));
-        // 32 hex chars (md5 length)
-        assert!(is_valid_hash_hex("5d41402abc4b2a76b9719d911017c592"));
-        // 40 hex chars (sha1 length)
-        assert!(is_valid_hash_hex("aaf4c61ddcc5e8a2dabede0f3b482cd9aea9434d"));
-        // Upper-case hex
-        assert!(is_valid_hash_hex("5D41402ABC4B2A76B9719D911017C592"));
-        // Mixed case
-        assert!(is_valid_hash_hex("5d41402ABC4b2a76b9719d911017c592"));
-    }
-
-    #[test]
-    fn valid_hash_hex_rejects_too_short() {
-        assert!(!is_valid_hash_hex("0123456789abcde")); // 15 chars
-        assert!(!is_valid_hash_hex("abcdef")); // 6 chars
-        assert!(!is_valid_hash_hex("")); // empty
-    }
-
-    #[test]
-    fn valid_hash_hex_rejects_odd_length() {
-        assert!(!is_valid_hash_hex("0123456789abcdef0")); // 17 chars
-    }
-
-    #[test]
-    fn valid_hash_hex_rejects_non_hex() {
-        assert!(!is_valid_hash_hex("zzzzzzzzzzzzzzzz")); // 16 non-hex chars
-        assert!(!is_valid_hash_hex("5d41402abc4b2a76b9719d911017c59g")); // trailing 'g'
-        assert!(!is_valid_hash_hex("hello world 1234")); // spaces
-    }
-}
