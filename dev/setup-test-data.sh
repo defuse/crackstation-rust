@@ -74,9 +74,29 @@ joshua
 matrix
 WORDS
 
-# Build and sort indexes for the algorithms we want to test.
-# Only building md5, sha1, and sha256 since the wordlist is small.
-# Algorithm name -> index file name mapping
+# Create the "huge" wordlist. In production HUGELIST.lst is a larger dictionary
+# than REALUNIQ.lst; the md5-huge and sha1-huge tables use it as a fallback.
+# For dev, it's a small list with some words unique to it (e.g. "elephant") and
+# some shared with REALUNIQ (e.g. "hello") to test deduplication via early_exit.
+# "monkey" is intentionally absent so tests can verify small-only lookups.
+HUGELIST="$CRACKING_DIR/HUGELIST.lst"
+echo "Creating huge wordlist at $HUGELIST..."
+cat > "$HUGELIST" << 'WORDS'
+hello
+Hello
+HELLO
+elephant
+giraffe
+telescope
+password
+winter
+umbrella
+volcano
+crystal
+phantom
+WORDS
+
+# Build and sort indexes for all 15 algorithms using REALUNIQ.lst.
 # Algorithm names must match `preimage algorithms` output exactly.
 # Index file names must match what cracking.rs registers.
 declare -A ALGO_MAP=(
@@ -107,6 +127,20 @@ for ALG in "${!ALGO_MAP[@]}"; do
     $PREIMAGE check "$IDX"
 done
 
+# Build md5-huge and sha1-huge indexes from HUGELIST.lst.
+# These are the fallback tables that use the larger dictionary.
+for ALG_HUGE in "md5:md5-huge.idx" "sha1:sha1-huge.idx"; do
+    ALG="${ALG_HUGE%%:*}"
+    IDX_NAME="${ALG_HUGE##*:}"
+    IDX="$CRACKING_DIR/$IDX_NAME"
+    echo "Building $IDX_NAME index (huge, from HUGELIST)..."
+    $PREIMAGE create "$ALG" "$HUGELIST" "$IDX"
+    echo "Sorting $IDX_NAME index..."
+    $PREIMAGE sort --ram "$IDX"
+    echo "Verifying $IDX_NAME index..."
+    $PREIMAGE check "$IDX"
+done
+
 echo ""
 echo "=== Test cracking data ready ==="
 echo "Set CRACKING_DIR=$CRACKING_DIR when running the server."
@@ -115,3 +149,4 @@ echo "Test with:"
 echo "  MD5 of 'password':  5f4dcc3b5aa765d61d8327deb882cf99"
 echo "  SHA1 of 'password': 5baa61e4c9b93f3f0682250b6cf8331b7ee68fd8"
 echo "  SHA256 of 'password': 5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8"
+echo "  MD5 of 'elephant' (HUGELIST-only): e4b48fd541b3dcb99cababc87c2ee88f"

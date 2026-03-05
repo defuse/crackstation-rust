@@ -28,7 +28,8 @@ pub struct CrackMatch {
 /// Initialize the PreimageOracle from a directory containing .idx and .lst files.
 ///
 /// Registers all 17 lookup tables in the same order as PHP's CrackHashes.php.
-/// Tables that don't exist on disk are skipped with a log warning.
+/// Panics if any table or dictionary file is missing or fails to load — a cracking
+/// service that silently skips tables gives false "Not found" answers.
 pub fn init_oracle(cracking_dir: &Path) -> PreimageOracle {
     let mut oracle = PreimageOracle::new();
     let realuniq = cracking_dir.join("REALUNIQ.lst");
@@ -59,14 +60,18 @@ pub fn init_oracle(cracking_dir: &Path) -> PreimageOracle {
     for (label, idx_name, algorithm) in tables {
         let idx_path = cracking_dir.join(idx_name);
         let dict = if label.contains("huge") { &hugelist } else { &realuniq };
-        if idx_path.exists() && dict.exists() {
-            match oracle.register_boxed(label, algorithm, &idx_path, dict) {
-                Ok(()) => tracing::info!("Loaded table: {}", label),
-                Err(e) => tracing::warn!("Skipping table {}: {}", label, e),
-            }
-        } else {
-            tracing::info!("Table {} not found at {}, skipping", label, idx_path.display());
-        }
+        oracle
+            .register_boxed(label, algorithm, &idx_path, dict)
+            .unwrap_or_else(|e| {
+                panic!(
+                    "Failed to load table '{}' (index: {}, dict: {}): {}",
+                    label,
+                    idx_path.display(),
+                    dict.display(),
+                    e,
+                )
+            });
+        tracing::info!("Loaded table: {}", label);
     }
 
     oracle
