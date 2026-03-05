@@ -88,41 +88,13 @@ pub async fn handle(State(state): State<AppState>, request: Request<Body>) -> Re
     let handler = page_info.handler.expect("BUG: canonical page must have a handler");
 
     // Extract body for POST requests.
-    // CrackStation's only POST form is a small urlencoded hash submission (20 hashes
-    // × ~130 chars max), so we reject wrong content types and large bodies early
-    // rather than buffering up to 100MB like defuse-rust needs for multipart uploads.
     let post_body = if method == Method::POST {
-        let content_type = request
-            .headers()
-            .get(header::CONTENT_TYPE)
-            .and_then(|v| v.to_str().ok())
-            .unwrap_or("");
-
-        if !content_type.starts_with("application/x-www-form-urlencoded") {
-            return (
-                StatusCode::UNSUPPORTED_MEDIA_TYPE,
-                "Content-Type must be application/x-www-form-urlencoded",
-            )
-                .into_response();
-        }
-
-        // Pre-check Content-Length before buffering to reject obviously oversized
-        // requests without reading the body.
-        let content_length = request
-            .headers()
-            .get(header::CONTENT_LENGTH)
-            .and_then(|v| v.to_str().ok())
-            .and_then(|v| v.parse::<u64>().ok());
-        if content_length.map_or(false, |len| len > 64 * 1024) {
-            return (StatusCode::PAYLOAD_TOO_LARGE, "Request body too large").into_response();
-        }
-
         let (_parts, body) = request.into_parts();
-        // 64KB hard limit — more than enough for 20 hashes.
-        match axum::body::to_bytes(body, 64 * 1024).await {
+        // 100MB limit (matches PHP's post_max_size)
+        match axum::body::to_bytes(body, 100 * 1024 * 1024).await {
             Ok(bytes) => Some(PostBody(bytes)),
             Err(_) => {
-                return (StatusCode::PAYLOAD_TOO_LARGE, "Request body too large").into_response();
+                return (StatusCode::BAD_REQUEST, "Failed to read request body").into_response();
             }
         }
     } else {
