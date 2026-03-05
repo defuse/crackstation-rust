@@ -2,6 +2,7 @@ pub mod about;
 pub mod contact;
 pub mod downloads;
 pub mod hashing_security;
+pub mod hashing_security_draft;
 pub mod home;
 pub mod legal_privacy;
 pub mod not_found;

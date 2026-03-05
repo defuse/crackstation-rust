@@ -34,6 +34,14 @@ pub static PAGE_REGISTRY: LazyLock<HashMap<&'static str, PageInfo>> = LazyLock::
             legacy_hit_count_id: "pages/hashing-security.php",
         },
         page! {
+            handler: hashing_security_draft,
+            slug: "hashing-security-draft",
+            title: "Secure Salted Password Hashing - How to do it Properly",
+            description: "How to hash passwords properly using salt. Why hashes should be salted and how to use salt correctly.",
+            keywords: "salt, salted hashing, secure password hashing, password hashing, proper way to hash passwords",
+            legacy_hit_count_id: "pages/hashing-security-draft.php",
+        },
+        page! {
             handler: downloads,
             slug: "downloads",
             title: "Downloads - CrackStation",
