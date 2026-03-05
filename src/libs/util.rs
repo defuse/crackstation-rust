@@ -57,3 +57,106 @@ pub fn is_https(connection_ip: IpAddr, headers: &HeaderMap) -> bool {
         false
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const LOCALHOST_V4: IpAddr = IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1));
+    const LOCALHOST_V6: IpAddr = IpAddr::V6(Ipv6Addr::new(0, 0, 0, 0, 0, 0, 0, 1));
+    const EXTERNAL_IP: IpAddr = IpAddr::V4(Ipv4Addr::new(203, 0, 113, 50));
+
+    // ---- client_ip: trusted proxy ----
+
+    #[test]
+    fn trusted_proxy_uses_x_forwarded_for() {
+        let mut headers = HeaderMap::new();
+        headers.insert("x-forwarded-for", "198.51.100.42".parse().unwrap());
+        assert_eq!(client_ip(LOCALHOST_V4, &headers), "198.51.100.42");
+    }
+
+    #[test]
+    fn trusted_proxy_uses_first_ip_in_x_forwarded_for_chain() {
+        let mut headers = HeaderMap::new();
+        headers.insert(
+            "x-forwarded-for",
+            "198.51.100.42, 10.0.0.1, 192.168.1.1".parse().unwrap(),
+        );
+        assert_eq!(client_ip(LOCALHOST_V4, &headers), "198.51.100.42");
+    }
+
+    #[test]
+    fn trusted_proxy_falls_back_to_x_real_ip() {
+        let mut headers = HeaderMap::new();
+        headers.insert("x-real-ip", "198.51.100.99".parse().unwrap());
+        assert_eq!(client_ip(LOCALHOST_V4, &headers), "198.51.100.99");
+    }
+
+    #[test]
+    fn trusted_proxy_prefers_x_forwarded_for_over_x_real_ip() {
+        let mut headers = HeaderMap::new();
+        headers.insert("x-forwarded-for", "198.51.100.42".parse().unwrap());
+        headers.insert("x-real-ip", "198.51.100.99".parse().unwrap());
+        assert_eq!(client_ip(LOCALHOST_V4, &headers), "198.51.100.42");
+    }
+
+    #[test]
+    fn trusted_proxy_no_headers_uses_connection_ip() {
+        let headers = HeaderMap::new();
+        assert_eq!(client_ip(LOCALHOST_V4, &headers), "127.0.0.1");
+    }
+
+    #[test]
+    fn trusted_proxy_ipv6_localhost() {
+        let mut headers = HeaderMap::new();
+        headers.insert("x-forwarded-for", "198.51.100.42".parse().unwrap());
+        assert_eq!(client_ip(LOCALHOST_V6, &headers), "198.51.100.42");
+    }
+
+    // ---- client_ip: untrusted source ----
+
+    #[test]
+    fn untrusted_source_ignores_x_forwarded_for() {
+        let mut headers = HeaderMap::new();
+        headers.insert("x-forwarded-for", "198.51.100.42".parse().unwrap());
+        assert_eq!(client_ip(EXTERNAL_IP, &headers), "203.0.113.50");
+    }
+
+    #[test]
+    fn untrusted_source_ignores_x_real_ip() {
+        let mut headers = HeaderMap::new();
+        headers.insert("x-real-ip", "198.51.100.42".parse().unwrap());
+        assert_eq!(client_ip(EXTERNAL_IP, &headers), "203.0.113.50");
+    }
+
+    // ---- is_https: trusted proxy ----
+
+    #[test]
+    fn trusted_proxy_https_proto() {
+        let mut headers = HeaderMap::new();
+        headers.insert("x-forwarded-proto", "https".parse().unwrap());
+        assert!(is_https(LOCALHOST_V4, &headers));
+    }
+
+    #[test]
+    fn trusted_proxy_http_proto() {
+        let mut headers = HeaderMap::new();
+        headers.insert("x-forwarded-proto", "http".parse().unwrap());
+        assert!(!is_https(LOCALHOST_V4, &headers));
+    }
+
+    #[test]
+    fn trusted_proxy_no_proto_header() {
+        let headers = HeaderMap::new();
+        assert!(!is_https(LOCALHOST_V4, &headers));
+    }
+
+    // ---- is_https: untrusted source ----
+
+    #[test]
+    fn untrusted_source_ignores_x_forwarded_proto() {
+        let mut headers = HeaderMap::new();
+        headers.insert("x-forwarded-proto", "https".parse().unwrap());
+        assert!(!is_https(EXTERNAL_IP, &headers));
+    }
+}
