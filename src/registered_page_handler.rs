@@ -115,6 +115,7 @@ pub async fn handle(State(state): State<AppState>, request: Request<Body>) -> Re
         captcha_bypass_header,
         query_string,
         url_prefix,
+        recaptcha_site_key: state.recaptcha_site_key,
     };
 
     // Dispatch based on HTTP method
@@ -160,6 +161,7 @@ fn render_not_found(client_ip: String, dnt_enabled: bool) -> Response {
         captcha_bypass_header: None,
         query_string: None,
         url_prefix: "https://crackstation.net".to_string(),
+        recaptcha_site_key: crate::app_state::PRODUCTION_RECAPTCHA_SITE_KEY,
     };
 
     (StatusCode::NOT_FOUND, NotFoundPage { ctx }).into_response()

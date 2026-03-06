@@ -15,6 +15,9 @@ PHPCOUNT_DATABASE_URL=mysql://phpcount:dev_phpcount_pass@localhost:3306/phpcount
 # See: https://developers.google.com/recaptcha/docs/faq#id-like-to-run-automated-tests-with-recaptcha.-what-should-i-do
 RECAPTCHA_SECRET_KEY=6LeIxAcTAAAAAGG-vFI1TnRWxMZNFuojJ4WifJWe
 
+# Use Google's test reCAPTCHA site key (works on localhost and any domain)
+USE_DEV_RECAPTCHA_KEY=true
+
 # Path to hash lookup index files (built by dev/setup-test-data.sh)
 CRACKING_DIR=dev/cracking
 

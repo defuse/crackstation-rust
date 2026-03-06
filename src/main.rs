@@ -65,13 +65,20 @@ async fn async_main() {
     // Validate required env vars
     std::env::var("RECAPTCHA_SECRET_KEY").expect("RECAPTCHA_SECRET_KEY must be set");
 
+    let use_dev_recaptcha = std::env::var("USE_DEV_RECAPTCHA_KEY")
+        .map(|v| v == "true")
+        .unwrap_or(false);
+    if use_dev_recaptcha {
+        tracing::info!("Using dev reCAPTCHA site key (USE_DEV_RECAPTCHA_KEY=true)");
+    }
+
     // Initialize PreimageOracle from CRACKING_DIR
     tracing::info!("Loading hash lookup tables from {}...", cracking_dir.display());
     let oracle = cracking::init_oracle(&cracking_dir);
     tracing::info!("Hash lookup tables loaded");
 
     // Create application state
-    let state = AppState::new(phpcount, oracle);
+    let state = AppState::new(phpcount, oracle, use_dev_recaptcha);
 
     // Build the router
     let app = Router::new()

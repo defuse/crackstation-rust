@@ -18,6 +18,8 @@ pub struct PageContext {
     pub query_string: Option<String>,
     /// URL prefix for building absolute URLs (e.g., "https://crackstation.net" or "http://localhost:3000")
     pub url_prefix: String,
+    /// reCAPTCHA site key for the client-side widget
+    pub recaptcha_site_key: &'static str,
 }
 
 impl PageContext {
