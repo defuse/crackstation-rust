@@ -6,7 +6,7 @@ use preimage::hashing::{
     Lm, Ntlm, MySql41, Md5Md5, Md5, Sha1, Md2, Md4,
     Sha256, Sha224, Sha384, Sha512, Whirlpool, Ripemd160, QubesV31,
 };
-use preimage::{PreimageOracle, HashResult, LookupMatch};
+use preimage::{PreimageOracle, HashResult};
 
 /// A cracked hash result for one input hash.
 pub struct CrackResult {
@@ -61,7 +61,7 @@ pub fn init_oracle(cracking_dir: &Path) -> PreimageOracle {
         let idx_path = cracking_dir.join(idx_name);
         let dict = if label.contains("huge") { &hugelist } else { &realuniq };
         oracle
-            .register_boxed(label, algorithm, &idx_path, dict)
+            .register(label, algorithm, &idx_path, dict)
             .unwrap_or_else(|e| {
                 panic!(
                     "Failed to load table '{}' (index: {}, dict: {}): {}",
@@ -102,24 +102,16 @@ pub fn crack_hashes(oracle: &PreimageOracle, hashes: &[String]) -> Vec<CrackResu
                 matches: matches
                     .iter()
                     .map(|m| {
-                        let plaintext = m.lookup_match.plaintext_lossy().into_owned();
-                        let (is_full, full_hash) = match &m.lookup_match {
-                            LookupMatch::Full { .. } => (true, None),
-                            LookupMatch::Partial { recomputed_hash, .. } => {
-                                (false, Some(hex::encode(recomputed_hash)))
-                            }
-                        };
-                        let algorithm_name = match &m.lookup_match {
-                            LookupMatch::Full { algorithm, .. }
-                            | LookupMatch::Partial { algorithm, .. } => {
-                                algorithm.name().to_string()
-                            }
-                        };
+                        let lm = &m.lookup_match;
                         CrackMatch {
-                            plaintext,
-                            algorithm_name,
-                            is_full_match: is_full,
-                            full_hash,
+                            plaintext: lm.plaintext_lossy().into_owned(),
+                            algorithm_name: lm.algorithm().name().to_string(),
+                            is_full_match: lm.is_full(),
+                            full_hash: if lm.is_full() {
+                                None
+                            } else {
+                                Some(hex::encode(lm.recomputed_hash()))
+                            },
                         }
                     })
                     .collect(),
