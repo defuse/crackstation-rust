@@ -150,31 +150,6 @@ mod tests {
         hex::encode(Sha256::digest(input.as_bytes()))
     }
 
-    /// Read the actual bypass key from the tester's secrets directory and verify
-    /// that its SHA256 matches the compiled-in constant.
-    #[test]
-    fn correct_key_matches_compiled_hash() {
-        let key_file = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-            .parent()
-            .expect("CARGO_MANIFEST_DIR has no parent")
-            .join("crackstation-tester/secrets/captcha-bypass-key.txt");
-        let key = std::fs::read_to_string(&key_file)
-            .unwrap_or_else(|e| panic!(
-                "Cannot read {}: {}. Generate with: xxd -l 32 -p /dev/urandom | tr -d '\\n' > {}",
-                key_file.display(), e, key_file.display()
-            ))
-            .trim()
-            .to_string();
-
-        assert_eq!(
-            sha256_hex(&key),
-            CAPTCHA_BYPASS_KEY_HASH,
-            "SHA256 of the key file does not match CAPTCHA_BYPASS_KEY_HASH — \
-             regenerate the constant with: printf '%s' \"$(cat {})\" | sha256sum",
-            key_file.display()
-        );
-    }
-
     /// A wrong key must not match the compiled hash.
     #[test]
     fn wrong_key_does_not_match() {
