@@ -11,13 +11,16 @@ Copyright 2026, Taylor Hornby. All rights reserved.
 
 ### Development Environment Setup
 
-Clone the workspace (which includes `crackstation-rust`, `crackstation-tester`, and
-the `preimage` crate):
+Clone `crackstation-rust` and the `preimage` crate side by side:
 
 ```
-git clone <repo-url> crackstation-rewrite
-cd crackstation-rewrite/crackstation-rust
+git clone <crackstation-rust-repo-url>
+git clone <preimage-repo-url>
+cd crackstation-rust
 ```
+
+The `preimage` crate must be at `../preimage` relative to this repo (it is referenced
+as a path dependency in `Cargo.toml`).
 
 #### Running the Dev Server
 

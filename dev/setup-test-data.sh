@@ -7,9 +7,8 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
-WORKSPACE_DIR="$(dirname "$PROJECT_DIR")"
 CRACKING_DIR="$SCRIPT_DIR/cracking"
-PREIMAGE="cargo run --manifest-path=$WORKSPACE_DIR/Cargo.toml -p preimage --"
+PREIMAGE="cargo run --manifest-path=$PROJECT_DIR/../preimage/Cargo.toml --"
 
 echo "=== Setting up test cracking data ==="
 echo "Output directory: $CRACKING_DIR"
