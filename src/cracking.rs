@@ -2,9 +2,10 @@
 
 use std::path::Path;
 
-use preimage::hashing::{
-    Lm, Ntlm, MySql41, Md5Md5, Md5, Sha1, Md2, Md4,
-    Sha256, Sha224, Sha384, Sha512, Whirlpool, Ripemd160, QubesV31,
+use preimage::hashes::{
+    LM, NTLM, MYSQL41, MD5MD5, MD5, SHA1, MD2, MD4,
+    SHA256, SHA224, SHA384, SHA512, WHIRLPOOL, RIPEMD160, QUBESV31,
+    HashAlgorithm,
 };
 use preimage::{PreimageOracle, HashResult};
 
@@ -36,25 +37,25 @@ pub fn init_oracle(cracking_dir: &Path) -> PreimageOracle {
     let hugelist = cracking_dir.join("HUGELIST.lst");
 
     // Register in exact PHP order (determines match priority)
-    let tables: Vec<(&str, &str, Box<dyn preimage::HashAlgorithm>)> = vec![
-        ("lm",         "lm.idx",         Box::new(Lm)),
-        ("ntlm",       "ntlm.idx",       Box::new(Ntlm)),
-        ("mysql4.1+",  "mysql4.1+.idx",  Box::new(MySql41)),
-        ("md5md5",     "md5md5.idx",     Box::new(Md5Md5)),
-        ("md5",        "md5.idx",        Box::new(Md5)),
-        ("sha1",       "sha1.idx",       Box::new(Sha1)),
-        ("md2",        "md2.idx",        Box::new(Md2)),
-        ("md4",        "md4.idx",        Box::new(Md4)),
-        ("sha256",     "sha256.idx",     Box::new(Sha256)),
-        ("sha224",     "sha224.idx",     Box::new(Sha224)),
-        ("sha384",     "sha384.idx",     Box::new(Sha384)),
-        ("sha512",     "sha512.idx",     Box::new(Sha512)),
-        ("whirlpool",  "whirlpool.idx",  Box::new(Whirlpool)),
-        ("ripemd160",  "ripemd160.idx",  Box::new(Ripemd160)),
-        ("qubesv3.1",  "qubesv3.1.idx",  Box::new(QubesV31)),
+    let tables: Vec<(&str, &str, &'static dyn HashAlgorithm)> = vec![
+        ("lm",         "lm.idx",         LM),
+        ("ntlm",       "ntlm.idx",       NTLM),
+        ("mysql4.1+",  "mysql4.1+.idx",  MYSQL41),
+        ("md5md5",     "md5md5.idx",     MD5MD5),
+        ("md5",        "md5.idx",        MD5),
+        ("sha1",       "sha1.idx",       SHA1),
+        ("md2",        "md2.idx",        MD2),
+        ("md4",        "md4.idx",        MD4),
+        ("sha256",     "sha256.idx",     SHA256),
+        ("sha224",     "sha224.idx",     SHA224),
+        ("sha384",     "sha384.idx",     SHA384),
+        ("sha512",     "sha512.idx",     SHA512),
+        ("whirlpool",  "whirlpool.idx",  WHIRLPOOL),
+        ("ripemd160",  "ripemd160.idx",  RIPEMD160),
+        ("qubesv3.1",  "qubesv3.1.idx",  QUBESV31),
         // Huge tables (fallback for md5/sha1)
-        ("md5-huge",   "md5-huge.idx",   Box::new(Md5)),
-        ("sha1-huge",  "sha1-huge.idx",  Box::new(Sha1)),
+        ("md5-huge",   "md5-huge.idx",   MD5),
+        ("sha1-huge",  "sha1-huge.idx",  SHA1),
     ];
 
     for (label, idx_name, algorithm) in tables {
