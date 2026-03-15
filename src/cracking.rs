@@ -2,12 +2,11 @@
 
 use std::path::Path;
 
-use preimage::hashes::{
+use preimage::{
+    HashAlgorithm, HashResult, PreimageOracle,
     LM, NTLM, MYSQL41, MD5MD5, MD5, SHA1, MD2, MD4,
     SHA256, SHA224, SHA384, SHA512, WHIRLPOOL, RIPEMD160, QUBESV31,
-    HashAlgorithm,
 };
-use preimage::{PreimageOracle, HashResult};
 
 /// A cracked hash result for one input hash.
 pub struct CrackResult {
@@ -85,7 +84,9 @@ pub fn init_oracle(cracking_dir: &Path) -> PreimageOracle {
 /// `format_error: true` — validation is handled by the oracle.
 pub fn crack_hashes(oracle: &PreimageOracle, hashes: &[String]) -> Vec<CrackResult> {
     let hash_refs: Vec<&str> = hashes.iter().map(|h| h.as_str()).collect();
-    let results = oracle.crack(&hash_refs, true); // early_exit = true (matches PHP)
+    let results = oracle
+        .crack(&hash_refs, true) // early_exit = true (matches PHP)
+        .expect("oracle lookup failed — index or dictionary file may be corrupted or missing");
 
     results
         .into_iter()

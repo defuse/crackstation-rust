@@ -18,7 +18,7 @@ askama_axum = "0.4"
 sqlx = { version = "0.8", features = ["runtime-tokio-rustls", "mysql"] }
 
 # Hash lookups
-preimage = { path = "../preimage", default-features = false }
+preimage = { path = "../preimage/preimage", default-features = false }
 
 # HTTP client (for reCAPTCHA verification)
 reqwest = { version = "0.12", features = ["json"] }
