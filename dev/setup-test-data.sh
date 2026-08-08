@@ -17,6 +17,9 @@ mkdir -p "$CRACKING_DIR"
 # Create a small test wordlist with common passwords
 WORDLIST="$CRACKING_DIR/REALUNIQ.lst"
 echo "Creating test wordlist at $WORDLIST..."
+# NOTE: the list ends with a deliberate empty line. Production's REALUNIQ.lst
+# contains one too — sha256("") cracks on the live site — so the empty word is
+# real dictionary data, and hashes of the empty string must keep resolving to it.
 cat > "$WORDLIST" << 'WORDS'
 password
 123456
@@ -71,6 +74,7 @@ cookie
 killer
 joshua
 matrix
+
 WORDS
 
 # Create the "huge" wordlist. In production HUGELIST.lst is a larger dictionary
