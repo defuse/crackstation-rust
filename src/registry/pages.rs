@@ -75,6 +75,12 @@ pub static PAGE_REGISTRY: LazyLock<HashMap<&'static str, PageInfo>> = LazyLock::
             keywords: "password cracking wordlist, biggest password cracking wordlist, cracking dictionary",
             legacy_hit_count_id: "pages/buy-crackstation-wordlist-cracking-dictionary.php",
         },
+
+        // Legacy URL for the wordlist page, still linked from elsewhere.
+        alias!(
+            "buy-crackstation-wordlist-password-cracking-dictionary"
+                => "crackstation-wordlist-password-cracking-dictionary"
+        ),
         page! {
             handler: legal_privacy,
             slug: "legal-privacy",
