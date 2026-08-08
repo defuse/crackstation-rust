@@ -11,7 +11,11 @@ Copyright 2026, Taylor Hornby. All rights reserved.
 
 ### Development Environment Setup
 
-Clone `crackstation-rust` and the `preimage` crate side by side:
+The server itself pulls `preimage` from crates.io, so building and running it needs
+nothing but this repo.
+
+Building the dev hash indexes still uses the `preimage` CLI from a sibling checkout,
+so clone the two side by side:
 
 ```
 git clone <crackstation-rust-repo-url>
@@ -19,8 +23,7 @@ git clone <preimage-repo-url>
 cd crackstation-rust
 ```
 
-The `preimage` crate must be at `../preimage` relative to this repo (it is referenced
-as a path dependency in `Cargo.toml`).
+`dev/setup-test-data.sh` expects that checkout at `../preimage` relative to this repo.
 
 #### Running the Dev Server
 

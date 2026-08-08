@@ -26,6 +26,8 @@ checksum = "683d7910e743518b0e34f1186f92494becacb047c7b6bf616c96772180fef923"
 [[package]]
 name = "allthehashes"
 version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8c4178a1b88c79cacd7f263365b29847bab759c42278cc410283709c4a499acd"
 dependencies = [
  "adler2",
  "crc",
@@ -1523,6 +1525,8 @@ dependencies = [
 [[package]]
 name = "preimage"
 version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2c779841b68b61ff721ec2bcd76e4d6f2fcd70e52a8910c38521f60f88e25ae8"
 dependencies = [
  "allthehashes",
  "anyhow",
