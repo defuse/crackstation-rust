@@ -97,10 +97,15 @@ pub static PAGE_REGISTRY: LazyLock<HashMap<&'static str, PageInfo>> = LazyLock::
             keywords: "",
             legacy_hit_count_id: "pages/thank-you.php",
         },
+        // The 404 page carries no metadata of its own, so it renders the site
+        // defaults. PHP does the same, though by accident: ProcessURL() returns
+        // the string "404", which is not a $PAGE_INFO key, so getPageTitle()
+        // falls through to $DEFAULT_TITLE and the P_TITL "File Not Found" in
+        // $FILE_NOT_FOUND is never read.
         page! {
             handler: not_found,
             slug: "404",
-            title: "File Not Found",
+            title: "",
             description: "",
             keywords: "",
             legacy_hit_count_id: "pages/404.php",

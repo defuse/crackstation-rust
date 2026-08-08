@@ -22,7 +22,7 @@ pub struct PageInfo {
     /// Page title (empty = use DEFAULT_TITLE)
     pub title: &'static str,
 
-    /// Meta description (empty = fall back to title, then DEFAULT_META_DESCRIPTION)
+    /// Meta description (empty = use DEFAULT_META_DESCRIPTION)
     pub description: &'static str,
 
     /// Meta keywords (empty = use DEFAULT_META_KEYWORDS)
@@ -129,14 +129,15 @@ impl PageInfo {
         if self.title.is_empty() { DEFAULT_TITLE } else { self.title }
     }
 
-    /// Get description, falling back to title then site default if empty
+    /// Get description, falling back to the site default if empty.
+    ///
+    /// PHP's `getPageMetaDescription` goes straight to the default when a page
+    /// declares no description — it never substitutes the title.
     pub fn description_or_default(&self) -> &'static str {
-        if !self.description.is_empty() {
-            self.description
-        } else if !self.title.is_empty() {
-            self.title
-        } else {
+        if self.description.is_empty() {
             DEFAULT_META_DESCRIPTION
+        } else {
+            self.description
         }
     }
 
@@ -151,10 +152,14 @@ pub const DEFAULT_TITLE: &str = "CrackStation - Online Password Hash Cracking - 
 pub const DEFAULT_META_DESCRIPTION: &str = "Crackstation is the most effective hash cracking service. We crack: MD5, SHA1, SHA2, WPA, and much more...";
 pub const DEFAULT_META_KEYWORDS: &str = "md5 cracking, sha1 cracking, hash cracking, password cracking";
 
-/// Page info for the 404 Not Found page
+/// Page info for the 404 Not Found page.
+///
+/// It declares no title or description, so the page renders the site defaults.
+/// PHP does the same: ProcessURL() returns the string "404", which is not a
+/// $PAGE_INFO key, so getPageTitle() falls through to $DEFAULT_TITLE and the
+/// P_TITL "File Not Found" in $FILE_NOT_FOUND is never read.
 pub static NOT_FOUND_PAGE_INFO: PageInfo = PageInfo {
     slug: "404",
-    title: "File Not Found",
     ..PageInfo::DEFAULT
 };
 
@@ -244,6 +249,61 @@ fn resolve_alias(page: &'static PageInfo) -> &'static PageInfo {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// PHP's $PAGE_INFO redirects this legacy URL to the wordlist page. Both the
+    /// bare and .htm spellings must land on the canonical wordlist URL.
+    #[test]
+    fn test_wordlist_legacy_alias_redirects() {
+        for path in [
+            "/buy-crackstation-wordlist-password-cracking-dictionary",
+            "/buy-crackstation-wordlist-password-cracking-dictionary.htm",
+        ] {
+            match resolve_path(path) {
+                PathLookupResult::Redirect { canonical_path } => assert_eq!(
+                    canonical_path, "/crackstation-wordlist-password-cracking-dictionary.htm",
+                    "wrong redirect target for {}", path
+                ),
+                other => panic!("{} should redirect, got {:?}", path, other),
+            }
+        }
+    }
+
+    /// The 404 page declares no metadata, so it renders the site defaults —
+    /// matching what PHP serves, where the "File Not Found" title is dead code.
+    ///
+    /// Asserts against NOT_FOUND_PAGE_INFO specifically, because that is the value
+    /// registered_page_handler.rs renders for a miss; the "404" registry entry is
+    /// a different object and checking it alone would prove nothing about output.
+    #[test]
+    fn test_not_found_page_uses_default_metadata() {
+        assert_eq!(NOT_FOUND_PAGE_INFO.title_or_default(), DEFAULT_TITLE);
+        assert_eq!(
+            NOT_FOUND_PAGE_INFO.description_or_default(),
+            DEFAULT_META_DESCRIPTION
+        );
+        assert_eq!(
+            NOT_FOUND_PAGE_INFO.keywords_or_default(),
+            DEFAULT_META_KEYWORDS
+        );
+
+        let registry_entry = lookup_page("404").expect("404 page must be registered");
+        assert_eq!(registry_entry.title_or_default(), DEFAULT_TITLE);
+        assert_eq!(
+            registry_entry.description_or_default(),
+            DEFAULT_META_DESCRIPTION
+        );
+    }
+
+    /// A page with a title but no description takes the site default description,
+    /// not its own title. PHP's getPageMetaDescription has no title fallback.
+    #[test]
+    fn test_missing_description_uses_default_not_title() {
+        let page = PageInfo {
+            title: "Some Page Title",
+            ..PageInfo::DEFAULT
+        };
+        assert_eq!(page.description_or_default(), DEFAULT_META_DESCRIPTION);
+    }
 
     #[test]
     fn test_home_page_exists() {
