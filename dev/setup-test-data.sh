@@ -96,7 +96,7 @@ phantom
 WORDS
 
 # Build and sort indexes for all 15 algorithms using REALUNIQ.lst.
-# Algorithm names must match `preimage algorithms` output exactly.
+# Algorithm names must match `preimage list` output exactly.
 # Index file names must match what cracking.rs registers.
 declare -A ALGO_MAP=(
     ["md5"]="md5.idx"
@@ -119,7 +119,7 @@ declare -A ALGO_MAP=(
 for ALG in "${!ALGO_MAP[@]}"; do
     IDX="$CRACKING_DIR/${ALGO_MAP[$ALG]}"
     echo "Building $ALG index..."
-    $PREIMAGE create "$ALG" "$WORDLIST" "$IDX"
+    $PREIMAGE create --algorithm "$ALG" --wordlist "$WORDLIST" --output "$IDX"
     echo "Sorting $ALG index..."
     $PREIMAGE sort --ram "$IDX"
     echo "Verifying $ALG index..."
@@ -133,7 +133,7 @@ for ALG_HUGE in "md5:md5-huge.idx" "sha1:sha1-huge.idx"; do
     IDX_NAME="${ALG_HUGE##*:}"
     IDX="$CRACKING_DIR/$IDX_NAME"
     echo "Building $IDX_NAME index (huge, from HUGELIST)..."
-    $PREIMAGE create "$ALG" "$HUGELIST" "$IDX"
+    $PREIMAGE create --algorithm "$ALG" --wordlist "$HUGELIST" --output "$IDX"
     echo "Sorting $IDX_NAME index..."
     $PREIMAGE sort --ram "$IDX"
     echo "Verifying $IDX_NAME index..."
