@@ -9,17 +9,50 @@ CrackStation's main goal is to promote the use of properly implemented salted
 hashing in new and existing web applications. We provide this service to help
 security researchers demonstrate the importance of hash salting. Any users that
 choose to use CrackStation as a malicious tool are solely responsible for their
-own actions. We do not ask where our clients get their hashes, so we are unable
-to help any law enforcement agency.
+own actions.
 </p>
 
 <h2>Privacy Policy</h2>
 <p>
-CrackStation respects the privacy of its users. Your IP address and web browser
-information may be logged as you request web pages from this site, but we do not
-sell that information or share that information with anyone. We DO NOT log the
-hashes that you crack.  However, you should still not try to crack the hash of
-your own password or other sensitive information, since your connection might be
-being intercepted by the NSA.
+CrackStation respects the privacy of its users. <strong>We DO NOT log the hashes
+that you crack</strong>, or the plaintexts we recover for you. They exist only
+for as long as it takes to answer your request. We do not sell information about
+you, we set no cookies of our own, and we give your browser no identifier of our
+own.
+</p>
+
+<h3>What we keep</h3>
+<p>
+Your IP address and web browser information may be logged as you request web
+pages from this site. In addition, the footer of every page shows a hit counter,
+and so that the "Unique Hits" number does not count the same visitor twice, we
+store a one-way hash of the page name together with your IP address, along with
+the time of your visit. That record is deleted 30 days after your first visit to
+that page. The hash is not salted and both of its inputs are predictable, so
+anyone who obtained a copy of that database could work out which IP addresses
+are in it — please treat these records as identifying you rather than as
+anonymous. The hit counts themselves are plain totals with nothing in them that
+points back to any visitor, and we keep those indefinitely.
+</p>
+
+<h3>Who else sees your IP address</h3>
+<p>
+This site uses Google reCAPTCHA to stop automated clients from consuming the
+service, so Google sees your IP address by two routes. The home page loads a
+script from Google, which means that when you open it your browser contacts
+Google directly and Google receives your IP address, your browser information
+and the page you came from; Google may also store data in your browser at that
+point. Then, when you submit hashes, our server sends your IP address to Google
+together with your answer to the captcha. What Google does with any of that is
+governed by Google's privacy policy rather than by this one. No other page on
+this site loads anything from a third party.
+</p>
+
+<h3>A caution</h3>
+<p>
+You should still not try to crack the hash of your own password or other
+sensitive information. Your connection might be being intercepted; the page that
+shows your results is also the page that runs Google's script; and simply
+loading a page here creates the visit record described above.
 </p>
 {% endblock %}
