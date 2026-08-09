@@ -25,6 +25,10 @@ use app_state::AppState;
 use libs::PhpCountService;
 use middleware::{blocking_middleware, SecurityHeadersLayer, UrlCanonicalizationLayer};
 
+/// Directory holding CSS, images, robots.txt and favicon.ico, relative to the
+/// process working directory.
+const STATIC_DIR: &str = "static";
+
 fn main() {
     // Build runtime with a higher blocking thread pool limit.
     // Every request runs on a blocking thread (via blocking_middleware), so this
@@ -56,6 +60,23 @@ async fn async_main() {
         std::env::var("CRACKING_DIR").expect("CRACKING_DIR must be set"),
     );
 
+    // Static assets are served from a path relative to the working directory, and
+    // ServeDir does not validate it — a missing directory yields a 404 per asset
+    // rather than an error, so every page would render with no CSS and no images
+    // while still returning 200. Refuse to start instead, the way a missing
+    // CRACKING_DIR does.
+    let static_dir = std::path::Path::new(STATIC_DIR);
+    if !static_dir.is_dir() {
+        panic!(
+            "static asset directory {:?} not found (working directory is {:?}). \
+             Run the server from the repository root, or the site would serve \
+             every page without stylesheets or images.",
+            STATIC_DIR,
+            std::env::current_dir().expect("working directory must be readable"),
+        );
+    }
+    tracing::info!("Serving static assets from {}", static_dir.display());
+
     // Database connection at startup (fail fast on misconfiguration)
     let phpcount_url = std::env::var("PHPCOUNT_DATABASE_URL").expect("PHPCOUNT_DATABASE_URL must be set");
     tracing::info!("Connecting to PHPCount database...");
@@ -84,7 +105,7 @@ async fn async_main() {
     let app = Router::new()
         .fallback_service(
             axum::routing::get_service(
-                ServeDir::new("static")
+                ServeDir::new(STATIC_DIR)
                     .fallback(any(registered_page_handler::handle).with_state(state.clone())),
             )
             .post(registered_page_handler::handle)
