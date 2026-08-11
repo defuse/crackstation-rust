@@ -148,6 +148,7 @@ struct HomePage {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::cracking::CrackMatch;
 
     /// Helper: compute SHA256 hex digest of a string, same as `is_captcha_bypassed` does.
     fn sha256_hex(input: &str) -> String {
@@ -172,6 +173,144 @@ mod tests {
             sha256_hex(""),
             CAPTCHA_BYPASS_KEY_HASH,
             "Empty string should not match CAPTCHA_BYPASS_KEY_HASH"
+        );
+    }
+
+    /// A payload exercising every character Askama's HTML escaper rewrites.
+    const XSS: &str = r#"<script>alert('pwn&"you')</script>"#;
+    /// What that payload must look like once escaped. Note `&#x27;` for the
+    /// apostrophe: an approved, encoding-only divergence from PHP's `&#039;`.
+    const XSS_ESCAPED: &str =
+        "&lt;script&gt;alert(&#x27;pwn&amp;&quot;you&#x27;)&lt;/script&gt;";
+
+    fn home_context() -> PageContext {
+        PageContext {
+            // The home page is registered under the empty slug.
+            page_info: crate::registry::lookup_page("").expect("home page must be registered"),
+            client_ip: "192.0.2.1".to_string(),
+            dnt_enabled: false,
+            hit_counts: crate::libs::phpcount::HitCounts::default(),
+            captcha_bypass_header: None,
+            query_string: None,
+            url_prefix: "https://crackstation.net".to_string(),
+            recaptcha_site_key: crate::app_state::PRODUCTION_RECAPTCHA_SITE_KEY,
+        }
+    }
+
+    /// Return the single rendered line containing `needle`, so the assertion can be an
+    /// exact whole-line comparison rather than a substring probe.
+    fn line_containing<'a>(html: &'a str, needle: &str) -> &'a str {
+        let mut matching = html.lines().filter(|line| line.contains(needle));
+        let line = matching
+            .next()
+            .unwrap_or_else(|| panic!("no rendered line contains {needle:?}"));
+        assert!(
+            matching.next().is_none(),
+            "expected exactly one line containing {needle:?}"
+        );
+        line.trim()
+    }
+
+    /// Askama's automatic HTML escaping is this site's only defence against a wordlist
+    /// entry -- assembled from public breach dumps -- executing script in the browser of
+    /// whoever cracked it. Nothing else escapes, and a single `askama.toml` at the crate
+    /// root would silently turn it off site-wide. Render every interpolation site on the
+    /// results page with hostile input and assert on the exact bytes produced.
+    #[test]
+    fn every_interpolated_value_on_the_results_page_is_html_escaped() {
+        let page = HomePage {
+            ctx: home_context(),
+            results: Some(vec![
+                CrackResult {
+                    hash: XSS.to_string(),
+                    matches: vec![
+                        CrackMatch {
+                            plaintext: XSS.to_string(),
+                            algorithm_name: XSS.to_string(),
+                            is_full_match: true,
+                            full_hash: None,
+                        },
+                        CrackMatch {
+                            plaintext: XSS.to_string(),
+                            algorithm_name: XSS.to_string(),
+                            is_full_match: false,
+                            full_hash: Some(XSS.to_string()),
+                        },
+                    ],
+                    format_error: false,
+                },
+                CrackResult {
+                    hash: XSS.to_string(),
+                    matches: Vec::new(),
+                    format_error: true,
+                },
+            ]),
+            error: Some(XSS.to_string()),
+            submitted_hashes: XSS.to_string(),
+        };
+
+        let html = page.render().expect("results page must render");
+
+        // The raw payload must appear nowhere, in any context, at all.
+        assert!(
+            !html.contains(XSS),
+            "the unescaped payload was rendered into the page"
+        );
+        assert!(
+            !html.contains("<script>alert"),
+            "an executable script tag reached the output"
+        );
+
+        // Exact output for each interpolation site.
+        assert_eq!(
+            line_containing(&html, "class=\"suc\""),
+            format!("<tr class=\"suc\"><td>{XSS_ESCAPED}</td><td>{XSS_ESCAPED}</td><td>{XSS_ESCAPED}</td></tr>"),
+            "full-match row"
+        );
+        assert_eq!(
+            line_containing(&html, "class=\"part\""),
+            format!("<tr class=\"part\"><td>{XSS_ESCAPED}</td><td>{XSS_ESCAPED}</td><td>{XSS_ESCAPED}</td></tr>"),
+            "partial-match row"
+        );
+        assert_eq!(
+            line_containing(&html, "Unrecognized hash format."),
+            format!("<tr class=\"fail\"><td>{XSS_ESCAPED}</td><td>Unknown</td><td>Unrecognized hash format.</td></tr>"),
+            "format-error row"
+        );
+        assert_eq!(
+            line_containing(&html, "<b>&lt;script"),
+            format!("<b>{XSS_ESCAPED}</b>"),
+            "error message"
+        );
+        assert_eq!(
+            line_containing(&html, "</textarea>"),
+            format!("name=\"hashes\" >{XSS_ESCAPED}</textarea>"),
+            "the submission echoed back into the textarea"
+        );
+    }
+
+    /// The "Not found." row is the other arm of the results table and interpolates the
+    /// submitted hash, so it needs escaping too.
+    #[test]
+    fn the_not_found_row_escapes_the_submitted_hash() {
+        let page = HomePage {
+            ctx: home_context(),
+            results: Some(vec![CrackResult {
+                hash: XSS.to_string(),
+                matches: Vec::new(),
+                format_error: false,
+            }]),
+            error: None,
+            submitted_hashes: String::new(),
+        };
+
+        let html = page.render().expect("results page must render");
+
+        assert!(!html.contains(XSS), "the unescaped payload was rendered");
+        assert_eq!(
+            line_containing(&html, "<td>Not found.</td>"),
+            format!("<tr class=\"fail\"><td>{XSS_ESCAPED}</td><td>Unknown</td><td>Not found.</td></tr>"),
+            "not-found row"
         );
     }
 }
