@@ -246,6 +246,36 @@ mod tests {
         assert_eq!(allow_header(&response), "GET, HEAD");
     }
 
+    /// The `Allow` value each registered page owes a 405, written out per slug rather
+    /// than derived from `accepts_post()` -- deriving it from the same source the
+    /// production code uses would make this vacuous. Adding a page, or letting a second
+    /// page start accepting POST, has to be a deliberate edit here.
+    #[test]
+    fn every_registered_page_advertises_exactly_the_methods_it_serves() {
+        let mut actual: Vec<(&'static str, &'static str)> = crate::registry::PAGE_REGISTRY
+            .values()
+            .filter_map(|page| page.handler.map(|h| (page.slug, h.allowed_methods())))
+            .collect();
+        actual.sort_unstable();
+        actual.dedup();
+
+        assert_eq!(
+            actual,
+            vec![
+                ("", "GET, HEAD, POST"),
+                ("404", "GET, HEAD"),
+                ("about-us", "GET, HEAD"),
+                ("contact-us", "GET, HEAD"),
+                ("crackstation-wordlist-password-cracking-dictionary", "GET, HEAD"),
+                ("downloads", "GET, HEAD"),
+                ("hashing-security", "GET, HEAD"),
+                ("hashing-security-draft", "GET, HEAD"),
+                ("legal-privacy", "GET, HEAD"),
+                ("thank-you", "GET, HEAD"),
+            ]
+        );
+    }
+
     #[tokio::test]
     async fn unsupported_method_on_an_unregistered_path_advertises_get_and_head() {
         let response =
