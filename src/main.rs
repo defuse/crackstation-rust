@@ -109,6 +109,10 @@ async fn async_main() {
                     .fallback(any(registered_page_handler::handle).with_state(state.clone())),
             )
             .post(registered_page_handler::handle)
+            // Everything except GET/HEAD/POST. Without this, axum answers those
+            // methods with a router-wide `Allow: GET,HEAD,POST`, which advertises
+            // POST on the nine pages that reject it.
+            .fallback(registered_page_handler::handle_unsupported_method)
             .with_state(state.clone()),
         )
         // Middleware stack (innermost first):

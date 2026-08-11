@@ -26,9 +26,13 @@ impl PageHandler for Handler {
         })
     }
 
-    fn post(&self, ctx: PageContext, state: &AppState, body: PostBody) -> Option<BoxFuture> {
+    fn accepts_post(&self) -> bool {
+        true
+    }
+
+    fn post(&self, ctx: PageContext, state: &AppState, body: PostBody) -> BoxFuture {
         let oracle = state.oracle.clone();
-        Some(Box::pin(async move {
+        Box::pin(async move {
             let form_data = form_urlencoded::parse(&body.0).collect::<Vec<_>>();
 
             let hashes_raw = form_data
@@ -109,7 +113,7 @@ impl PageHandler for Handler {
                 submitted_hashes: hashes_raw,
             }
             .into_response()
-        }))
+        })
     }
 }
 
