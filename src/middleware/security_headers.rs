@@ -10,7 +10,7 @@
 use axum::{
     body::Body,
     extract::ConnectInfo,
-    http::{header, Request, Response},
+    http::{header, Request, Response, StatusCode},
 };
 use std::net::SocketAddr;
 use std::task::{Context, Poll};
@@ -108,6 +108,19 @@ where
                 header::REFERRER_POLICY,
                 "strict-origin-when-cross-origin".parse().expect("valid header value"),
             );
+
+            // Allow belongs on a 405 and nowhere else. axum's MethodRouter stamps its
+            // router-wide value (GET,HEAD,POST) onto any response from the method
+            // fallback that does not already carry one, so the 404 that fallback returns
+            // for an unresolved path would otherwise advertise three methods, two of
+            // which answer 404 on that path and one of which is refused everywhere but
+            // "/". There is no public way to switch that off: MethodRouter's
+            // skip_allow_header is private and reachable only through any(), which
+            // cannot also carry the GET and POST routes this router needs.
+            if response.status() != StatusCode::METHOD_NOT_ALLOWED {
+                response.headers_mut().remove(header::ALLOW);
+            }
+            let headers = response.headers_mut();
 
             // HSTS: only over HTTPS and not for localhost/dev hosts
             if is_https && !is_dev {

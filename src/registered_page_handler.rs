@@ -6,7 +6,7 @@
 use axum::{
     body::Body,
     extract::{ConnectInfo, State},
-    http::{header, Method, Request, StatusCode, Uri},
+    http::{header, HeaderMap, Method, Request, StatusCode, Uri},
     response::{IntoResponse, Response},
 };
 use std::net::SocketAddr;
@@ -150,18 +150,38 @@ pub async fn handle(State(state): State<AppState>, request: Request<Body>) -> Re
 /// the one that ships.
 ///
 /// Deliberately reads no body and records no hit.
-pub async fn handle_unsupported_method(uri: Uri) -> Response {
-    let allowed_methods = match resolve_path(uri.path()) {
-        PathLookupResult::Canonical(page) => page
-            .handler
-            .expect("BUG: canonical page must have a handler")
-            .allowed_methods(),
-        // Aliases are redirected by UrlCanonicalizationLayer before the router sees
-        // them, static assets are served by ServeDir, and unregistered paths render
-        // the 404 page. All of those are read-only.
-        PathLookupResult::Redirect { .. } | PathLookupResult::NotFound => "GET, HEAD",
-    };
-    method_not_allowed(allowed_methods)
+pub async fn handle_unsupported_method(
+    ConnectInfo(connection_addr): ConnectInfo<SocketAddr>,
+    headers: HeaderMap,
+    uri: Uri,
+) -> Response {
+    match resolve_path(uri.path()) {
+        PathLookupResult::Canonical(page) => method_not_allowed(
+            page.handler
+                .expect("BUG: canonical page must have a handler")
+                .allowed_methods(),
+        ),
+        // A path that resolves to no registered page gets the 404 page — the same answer
+        // GET and POST already give it. A 405 here would advertise `Allow: GET, HEAD` on
+        // a URL where GET is itself a 404, i.e. name two methods that do not work.
+        //
+        // Static assets land in this arm too, because `resolve_path` only knows the page
+        // registry, so an existing asset answers 404 rather than the 405 its existence
+        // would justify. That matches what POST already does, keeping the two methods in
+        // step, and avoids putting a filesystem probe on the request path.
+        //
+        // The Redirect arm is unreachable: UrlCanonicalizationLayer redirects aliases for
+        // every method, verified with `PUT /index.htm` answering 301.
+        PathLookupResult::Redirect { .. } | PathLookupResult::NotFound => {
+            let client_ip = client_ip(connection_addr.ip(), &headers);
+            let dnt_enabled = headers
+                .get(header::DNT)
+                .and_then(|v| v.to_str().ok())
+                .map(|v| v == "1")
+                .unwrap_or(false);
+            render_not_found(client_ip, dnt_enabled)
+        }
+    }
 }
 
 /// Build a 405 carrying the `Allow` header RFC 9110 §15.5.6 requires.
@@ -223,27 +243,38 @@ mod tests {
             .expect("Allow header must be ASCII")
     }
 
+    /// Call the fallback the way axum would, with a loopback peer and no headers.
+    async fn unsupported_method_on(path: &str) -> Response {
+        handle_unsupported_method(
+            ConnectInfo(SocketAddr::from(([127, 0, 0, 1], 40000))),
+            HeaderMap::new(),
+            path.parse().expect("valid uri"),
+        )
+        .await
+    }
+
     #[tokio::test]
     async fn unsupported_method_on_a_page_without_post_advertises_get_and_head() {
-        let response =
-            handle_unsupported_method("/about-us.htm".parse().expect("valid uri")).await;
+        let response = unsupported_method_on("/about-us.htm").await;
         assert_eq!(response.status(), StatusCode::METHOD_NOT_ALLOWED);
         assert_eq!(allow_header(&response), "GET, HEAD");
     }
 
     #[tokio::test]
     async fn unsupported_method_on_the_home_page_advertises_post_too() {
-        let response = handle_unsupported_method("/".parse().expect("valid uri")).await;
+        let response = unsupported_method_on("/").await;
         assert_eq!(response.status(), StatusCode::METHOD_NOT_ALLOWED);
         assert_eq!(allow_header(&response), "GET, HEAD, POST");
     }
 
+    /// A path that resolves to no registered page must answer 404, not a 405 claiming
+    /// `Allow: GET, HEAD` on a URL where GET is itself a 404. Static assets resolve the
+    /// same way, since `resolve_path` only knows the page registry.
     #[tokio::test]
-    async fn unsupported_method_on_a_static_asset_advertises_get_and_head() {
-        let response =
-            handle_unsupported_method("/css/main.css".parse().expect("valid uri")).await;
-        assert_eq!(response.status(), StatusCode::METHOD_NOT_ALLOWED);
-        assert_eq!(allow_header(&response), "GET, HEAD");
+    async fn unsupported_method_on_a_static_asset_renders_the_404_page() {
+        let response = unsupported_method_on("/css/main.css").await;
+        assert_eq!(response.status(), StatusCode::NOT_FOUND);
+        assert_eq!(response.headers().get(header::ALLOW), None);
     }
 
     /// The `Allow` value each registered page owes a 405, written out per slug rather
@@ -277,10 +308,9 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn unsupported_method_on_an_unregistered_path_advertises_get_and_head() {
-        let response =
-            handle_unsupported_method("/no-such-page.htm".parse().expect("valid uri")).await;
-        assert_eq!(response.status(), StatusCode::METHOD_NOT_ALLOWED);
-        assert_eq!(allow_header(&response), "GET, HEAD");
+    async fn unsupported_method_on_an_unregistered_path_renders_the_404_page() {
+        let response = unsupported_method_on("/no-such-page.htm").await;
+        assert_eq!(response.status(), StatusCode::NOT_FOUND);
+        assert_eq!(response.headers().get(header::ALLOW), None);
     }
 }
