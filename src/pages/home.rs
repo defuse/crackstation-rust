@@ -178,10 +178,16 @@ mod tests {
 
     /// A payload exercising every character Askama's HTML escaper rewrites.
     const XSS: &str = r#"<script>alert('pwn&"you')</script>"#;
-    /// What that payload must look like once escaped. Note `&#x27;` for the
+    /// What that payload must look like once escaped by Askama. Note `&#x27;` for the
     /// apostrophe: an approved, encoding-only divergence from PHP's `&#039;`.
     const XSS_ESCAPED: &str =
         "&lt;script&gt;alert(&#x27;pwn&amp;&quot;you&#x27;)&lt;/script&gt;";
+    /// The plaintext cell is escaped by `html_escape::escape_text` instead, so that
+    /// whitespace survives the table's collapsing context. That escaper is a port of
+    /// defuse.ca's and emits PHP's `&#039;`. Same characters neutralised, one
+    /// different spelling of the apostrophe entity.
+    const XSS_ESCAPED_PLAINTEXT: &str =
+        "&lt;script&gt;alert(&#039;pwn&amp;&quot;you&#039;)&lt;/script&gt;";
 
     fn home_context() -> PageContext {
         PageContext {
@@ -264,12 +270,12 @@ mod tests {
         // Exact output for each interpolation site.
         assert_eq!(
             line_containing(&html, "class=\"suc\""),
-            format!("<tr class=\"suc\"><td>{XSS_ESCAPED}</td><td>{XSS_ESCAPED}</td><td>{XSS_ESCAPED}</td></tr>"),
+            format!("<tr class=\"suc\"><td>{XSS_ESCAPED}</td><td>{XSS_ESCAPED}</td><td>{XSS_ESCAPED_PLAINTEXT}</td></tr>"),
             "full-match row"
         );
         assert_eq!(
             line_containing(&html, "class=\"part\""),
-            format!("<tr class=\"part\"><td>{XSS_ESCAPED}</td><td>{XSS_ESCAPED}</td><td>{XSS_ESCAPED}</td></tr>"),
+            format!("<tr class=\"part\"><td>{XSS_ESCAPED}</td><td>{XSS_ESCAPED}</td><td>{XSS_ESCAPED_PLAINTEXT}</td></tr>"),
             "partial-match row"
         );
         assert_eq!(
@@ -287,6 +293,46 @@ mod tests {
             format!("name=\"hashes\" >{XSS_ESCAPED}</textarea>"),
             "the submission echoed back into the textarea"
         );
+    }
+
+    /// A password whose whitespace HTML would collapse must render so the user can
+    /// read and copy it back exactly. Before this, "a  b" displayed as "a b" and
+    /// " hunter2" lost its leading space -- indistinguishable from a different
+    /// password, on the one cell whose whole job is to be copied.
+    #[test]
+    fn plaintext_whitespace_survives_the_table_cell() {
+        for (plaintext, expected) in [
+            ("a  b", "a &nbsp;b"),
+            (" hunter2", "&nbsp;hunter2"),
+            ("trailing ", "trailing&nbsp;"),
+            // 5 spaces to the next tab stop, rendered as space-nbsp-space-nbsp-space
+            // so the line can still break while showing all five columns.
+            ("tab\there", "tab &nbsp; &nbsp; here"),
+            ("plain", "plain"),
+        ] {
+            let page = HomePage {
+                ctx: home_context(),
+                results: Some(vec![CrackResult {
+                    hash: "abc".to_string(),
+                    matches: vec![CrackMatch {
+                        plaintext: plaintext.to_string(),
+                        algorithm_name: "md5".to_string(),
+                        is_full_match: true,
+                        full_hash: None,
+                    }],
+                    format_error: false,
+                }]),
+                error: None,
+                submitted_hashes: String::new(),
+            };
+
+            let html = page.render().expect("must render");
+            assert_eq!(
+                line_containing(&html, "class=\"suc\""),
+                format!("<tr class=\"suc\"><td>abc</td><td>md5</td><td>{expected}</td></tr>"),
+                "plaintext {plaintext:?}"
+            );
+        }
     }
 
     /// The "Not found." row is the other arm of the results table and interpolates the

@@ -62,9 +62,9 @@ sha512, ripeMD160, whirlpool, MySQL 4.1+ (sha1(sha1_bin)), QubesV3.1BackupDefaul
 {% else %}
 {% for m in result.matches %}
 {% if m.is_full_match %}
-<tr class="suc"><td>{{ result.hash }}</td><td>{{ m.algorithm_name }}</td><td>{{ m.plaintext }}</td></tr>
+<tr class="suc"><td>{{ result.hash }}</td><td>{{ m.algorithm_name }}</td><td>{{ m.plaintext_html()|safe }}</td></tr>
 {% else %}
-<tr class="part"><td>{{ result.hash }}</td><td>{{ m.algorithm_name }}</td><td>{{ m.plaintext }}</td></tr>
+<tr class="part"><td>{{ result.hash }}</td><td>{{ m.algorithm_name }}</td><td>{{ m.plaintext_html()|safe }}</td></tr>
 {% endif %}
 {% endfor %}
 {% endif %}

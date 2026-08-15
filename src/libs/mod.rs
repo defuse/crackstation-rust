@@ -1,3 +1,4 @@
+pub mod html_escape;
 pub mod csrf;
 pub mod phpcount;
 pub mod recaptcha;

@@ -16,6 +16,32 @@ pub struct CrackResult {
     pub format_error: bool,
 }
 
+impl CrackMatch {
+    /// The plaintext as HTML that displays identically to the text itself.
+    ///
+    /// A table cell is a whitespace-collapsing context, so a password of `"a  b"`,
+    /// `" hunter2"` or `"pass\t"` renders as something the user cannot copy back --
+    /// and cannot distinguish from a different password. This runs the same escaper
+    /// defuse.ca uses, which converts the runs HTML would eat into `&nbsp;` while
+    /// escaping everything with meaning in HTML first.
+    ///
+    /// The result is already escaped, so the template must render it with `|safe`.
+    /// That is only sound because `escape_text` escapes before it introduces any
+    /// markup of its own — see its tests.
+    pub fn plaintext_html(&self) -> String {
+        let escaped = crate::libs::html_escape::escape_text(&self.plaintext, false, 8);
+
+        // `escape_text` protects a trailing space only when a line ending follows it,
+        // which is what its source contexts need. Here the string ends at `</td>`, and
+        // a space in that position collapses just as surely -- and a trailing space is
+        // exactly the kind of password character this whole change exists to preserve.
+        match escaped.strip_suffix(' ') {
+            Some(head) => format!("{head}&nbsp;"),
+            None => escaped,
+        }
+    }
+}
+
 /// A single match found for a hash.
 pub struct CrackMatch {
     pub plaintext: String,
