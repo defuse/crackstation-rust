@@ -319,9 +319,7 @@ mod tests {
                 ("crackstation-wordlist-password-cracking-dictionary", "GET, HEAD"),
                 ("downloads", "GET, HEAD"),
                 ("hashing-security", "GET, HEAD"),
-                ("hashing-security-draft", "GET, HEAD"),
                 ("legal-privacy", "GET, HEAD"),
-                ("thank-you", "GET, HEAD"),
             ]
         );
     }

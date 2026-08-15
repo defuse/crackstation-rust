@@ -31,14 +31,6 @@ pub static PAGE_REGISTRY: LazyLock<HashMap<&'static str, PageInfo>> = LazyLock::
             legacy_hit_count_id: "pages/hashing-security.php",
         },
         page! {
-            handler: hashing_security_draft,
-            slug: "hashing-security-draft",
-            title: "Secure Salted Password Hashing - How to do it Properly",
-            description: "How to hash passwords properly using salt. Why hashes should be salted and how to use salt correctly.",
-            keywords: "salt, salted hashing, secure password hashing, password hashing, proper way to hash passwords",
-            legacy_hit_count_id: "pages/hashing-security-draft.php",
-        },
-        page! {
             handler: downloads,
             slug: "downloads",
             title: "CrackStation Tools & Downloads",
@@ -85,14 +77,6 @@ pub static PAGE_REGISTRY: LazyLock<HashMap<&'static str, PageInfo>> = LazyLock::
             description: "CrackStation.net's privacy policy",
             keywords: "hash cracking legal, penetration testing, password security",
             legacy_hit_count_id: "pages/legal-privacy.php",
-        },
-        page! {
-            handler: thank_you,
-            slug: "thank-you",
-            title: "Thanks!",
-            description: "Donation Confirmation Page",
-            keywords: "",
-            legacy_hit_count_id: "pages/thank-you.php",
         },
         // The 404 page carries no metadata of its own, so it renders the site
         // defaults. PHP does the same, though by accident: ProcessURL() returns
