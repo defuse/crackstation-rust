@@ -23,3 +23,8 @@ CRACKING_DIR=dev/cracking
 
 # Logging (uncomment for debug output)
 # RUST_LOG=crackstation_rust=debug,tower_http=debug
+
+# Directory holding the wordlist archives linked from the wordlist page as
+# /files/*. Production serves these through Caddy from /storage/extras/files;
+# the server checks they exist at startup and refuses to boot without them.
+WORDLIST_FILES_DIR=dev/files

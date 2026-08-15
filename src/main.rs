@@ -37,6 +37,12 @@ use middleware::{
 /// process working directory.
 const STATIC_DIR: &str = "static";
 
+/// The wordlist archives the wordlist page links as `/files/<name>`.
+///
+/// Kept next to the startup check so the list cannot drift from
+/// `templates/pages/wordlist.html`; a test asserts the two agree.
+const WORDLIST_MIRROR_FILES: &[&str] = &["crackstation.txt.gz", "crackstation-human-only.txt.gz"];
+
 /// Size of Tokio's blocking thread pool.
 ///
 /// Every request runs its handler on one of these (see `blocking_middleware`), so
@@ -109,6 +115,37 @@ async fn async_main() {
     }
     tracing::info!("Serving static assets from {}", static_dir.display());
 
+    // The wordlist page advertises an "HTTP Mirror (Slow)" for each download, and
+    // those two blobs are the product the page exists to deliver. Nothing in the
+    // application referenced them before: /files is a Caddy `handle_path` pointing at
+    // /storage/extras/files, so a deployment that forgot the rule, or a storage volume
+    // that came up without the blobs, served a 404 from the one link a user without a
+    // torrent client has to use — and the site looked completely healthy otherwise.
+    //
+    // Name the dependency and check it here. Caddy still answers /files/* first in
+    // production, so this ServeDir is what makes the URLs testable and a working
+    // fallback if the front-end rule is ever dropped.
+    let wordlist_files_dir = std::path::PathBuf::from(
+        std::env::var("WORDLIST_FILES_DIR").expect("WORDLIST_FILES_DIR must be set"),
+    );
+    for file_name in WORDLIST_MIRROR_FILES {
+        let path = wordlist_files_dir.join(file_name);
+        if !path.is_file() {
+            panic!(
+                "wordlist mirror file {:?} not found. The wordlist page links it as \
+                 /files/{}, so without it that download 404s while every other page \
+                 looks healthy. Set WORDLIST_FILES_DIR to the directory holding the \
+                 wordlist archives (production: /storage/extras/files).",
+                path.display(),
+                file_name,
+            );
+        }
+    }
+    tracing::info!(
+        "Serving wordlist downloads from {}",
+        wordlist_files_dir.display()
+    );
+
     // Database connection at startup (fail fast on misconfiguration)
     let phpcount_url = std::env::var("PHPCOUNT_DATABASE_URL").expect("PHPCOUNT_DATABASE_URL must be set");
     tracing::info!("Connecting to PHPCount database...");
@@ -135,6 +172,9 @@ async fn async_main() {
 
     // Build the router
     let app = Router::new()
+        // Wordlist archives. Caddy's handle_path answers these first in production;
+        // this makes the dependency explicit and the URLs testable.
+        .nest_service("/files", ServeDir::new(&wordlist_files_dir))
         .fallback_service(
             axum::routing::get_service(
                 ServeDir::new(STATIC_DIR)
@@ -191,4 +231,30 @@ async fn async_main() {
     })
     .await
     .expect("server error");
+}
+
+#[cfg(test)]
+mod tests {
+    use super::WORDLIST_MIRROR_FILES;
+
+    /// The startup check and the page have to name the same files. If someone adds a
+    /// download to the template, the check must grow with it, or the new link is
+    /// exactly as unguarded as these two were.
+    #[test]
+    fn wordlist_mirror_files_match_the_links_on_the_page() {
+        let template = include_str!("../templates/pages/wordlist.html");
+
+        let linked: Vec<&str> = template
+            .match_indices("href=\"/files/")
+            .map(|(index, matched)| {
+                let rest = &template[index + matched.len()..];
+                &rest[..rest.find('"').expect("href must be closed")]
+            })
+            .collect();
+
+        assert_eq!(
+            linked, WORDLIST_MIRROR_FILES,
+            "the /files links on the wordlist page and WORDLIST_MIRROR_FILES disagree"
+        );
+    }
 }
