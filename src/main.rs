@@ -6,7 +6,13 @@
 //! published by the Free Software Foundation, either version 3 of the
 //! License, or (at your option) any later version.
 
-use axum::{middleware as axum_middleware, routing::any, Router};
+use axum::{
+    error_handling::HandleErrorLayer, http::StatusCode, middleware as axum_middleware,
+    routing::any, BoxError, Router,
+};
+use tower::{
+    limit::GlobalConcurrencyLimitLayer, load_shed::LoadShedLayer, ServiceBuilder,
+};
 use tower_http::{catch_panic::CatchPanicLayer, services::ServeDir};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
@@ -23,19 +29,45 @@ mod registry;
 
 use app_state::AppState;
 use libs::PhpCountService;
-use middleware::{blocking_middleware, SecurityHeadersLayer, UrlCanonicalizationLayer};
+use middleware::{
+    blocking_middleware, buffer_body_middleware, SecurityHeadersLayer, UrlCanonicalizationLayer,
+};
 
 /// Directory holding CSS, images, robots.txt and favicon.ico, relative to the
 /// process working directory.
 const STATIC_DIR: &str = "static";
 
+/// Size of Tokio's blocking thread pool.
+///
+/// Every request runs its handler on one of these (see `blocking_middleware`), so
+/// this is the ceiling on threads the request path can consume.
+const MAX_BLOCKING_THREADS: usize = 4096;
+
+/// How many requests may be in the blocking middleware at once.
+///
+/// **This is a correctness bound, not a tuning knob.** The pool is used
+/// re-entrantly: a request holds one thread for its whole lifetime, and the
+/// handler stack running inside it draws a *second* thread from the same pool —
+/// `ServeDir` probes the filesystem through `tokio::fs`, which is `spawn_blocking`,
+/// and the reCAPTCHA call resolves DNS the same way. Both are leaves, and at most
+/// one is outstanding per request, so peak demand is `2 * MAX_CONCURRENT_REQUESTS`.
+///
+/// If that can reach `MAX_BLOCKING_THREADS`, the pool deadlocks *permanently*:
+/// every thread ends up parked waiting on a nested task queued behind it in the
+/// same FIFO, and none of the escapes apply — tokio will not exceed the cap
+/// (`blocking/pool.rs`: the at-cap branch is empty, the task simply waits), a
+/// thread inside `task.run()` is never counted idle so the keep-alive timer never
+/// reaps it, and `spawn_blocking` closures cannot be cancelled, so client
+/// disconnects and proxy timeouts free nothing. The process must be restarted, and
+/// it still answers TCP handshakes meanwhile, so connect-based health checks pass.
+///
+/// Keeping this at a quarter of the pool leaves peak demand at half the cap.
+const MAX_CONCURRENT_REQUESTS: usize = MAX_BLOCKING_THREADS / 4;
+
 fn main() {
-    // Build runtime with a higher blocking thread pool limit.
-    // Every request runs on a blocking thread (via blocking_middleware), so this
-    // effectively limits max concurrent requests.
     let runtime = tokio::runtime::Builder::new_multi_thread()
         .enable_all()
-        .max_blocking_threads(4096)
+        .max_blocking_threads(MAX_BLOCKING_THREADS)
         .build()
         .expect("failed to build Tokio runtime");
 
@@ -119,11 +151,28 @@ async fn async_main() {
         // 1. BlockingMiddleware: runs handlers on blocking thread pool for OS preemption
         .layer(axum_middleware::from_fn(blocking_middleware))
         .with_state(state.clone())
-        // 2. URL canonicalization: normalize URLs, redirect to canonical form
+        // 2. Admission control, immediately outside the blocking middleware so that
+        //    it gates entry to the pool and nothing else. See MAX_CONCURRENT_REQUESTS:
+        //    the limit is what makes the pool's re-entrant use safe. LoadShed turns the
+        //    concurrency limit's backpressure into an immediate 503 rather than an
+        //    unbounded queue, and HandleError maps that back into a response, since
+        //    axum's router requires an infallible service.
+        .layer(
+            ServiceBuilder::new()
+                .layer(HandleErrorLayer::new(|_: BoxError| async {
+                    StatusCode::SERVICE_UNAVAILABLE
+                }))
+                .layer(LoadShedLayer::new())
+                .layer(GlobalConcurrencyLimitLayer::new(MAX_CONCURRENT_REQUESTS)),
+        )
+        // 3. Buffer the POST body on the async runtime, before a pool thread is
+        //    taken, so a slow body cannot pin one.
+        .layer(axum_middleware::from_fn(buffer_body_middleware))
+        // 4. URL canonicalization: normalize URLs, redirect to canonical form
         .layer(UrlCanonicalizationLayer)
-        // 3. Security headers: HSTS, X-Frame-Options, etc.
+        // 5. Security headers: HSTS, X-Frame-Options, etc.
         .layer(SecurityHeadersLayer)
-        // 4. Catch panics: convert panics to 500 errors
+        // 6. Catch panics: convert panics to 500 errors
         .layer(CatchPanicLayer::new());
 
     tracing::info!("Listening on http://{}", listen_addr);

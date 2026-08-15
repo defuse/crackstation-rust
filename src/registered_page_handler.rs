@@ -94,16 +94,17 @@ pub async fn handle(State(state): State<AppState>, request: Request<Body>) -> Re
         return method_not_allowed(handler.allowed_methods());
     }
 
-    // Extract body for POST requests.
+    // The body was already read by buffer_body_middleware, which runs outside
+    // blocking_middleware on the async runtime. Reading it here would mean reading
+    // it on a pool thread, where a dribbled body pins that thread uncancellably.
     let post_body = if method == Method::POST {
-        let (_parts, body) = request.into_parts();
-        // 100MB limit (matches PHP's post_max_size)
-        match axum::body::to_bytes(body, 100 * 1024 * 1024).await {
-            Ok(bytes) => Some(PostBody(bytes)),
-            Err(_) => {
-                return (StatusCode::BAD_REQUEST, "Failed to read request body").into_response();
-            }
-        }
+        Some(
+            request
+                .extensions()
+                .get::<PostBody>()
+                .expect("BUG: POST reached the dispatcher without buffer_body_middleware")
+                .clone(),
+        )
     } else {
         None
     };

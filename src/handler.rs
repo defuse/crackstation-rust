@@ -13,7 +13,11 @@ use crate::app_state::AppState;
 use crate::context::PageContext;
 
 /// Represents a parsed POST body (form-urlencoded).
-#[derive(Debug)]
+///
+/// `Clone` is required to travel in the request extensions, which is how
+/// `buffer_body_middleware` hands the body to the dispatcher. `Bytes` is
+/// reference-counted, so cloning does not copy the body.
+#[derive(Debug, Clone)]
 pub struct PostBody(pub Bytes);
 
 pub type BoxFuture = Pin<Box<dyn Future<Output = Response> + Send>>;
