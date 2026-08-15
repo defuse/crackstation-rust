@@ -14,11 +14,19 @@ GRANT ALL PRIVILEGES ON `phpcount`.* TO 'phpcount'@'%';
 
 USE `phpcount`;
 
+-- PRIMARY KEY (pageid, isunique) is upstream PHPCount's, and it is load-bearing:
+-- create_counts_if_not_present does a SELECT then an INSERT with no transaction, so
+-- two concurrent first-hits on the same page both see "absent" and both insert.
+-- Without the key the table then carries duplicate rows for one (pageid, isunique),
+-- count_hit's UPDATE increments all of them, and get_hit_counts reads only one back,
+-- so the displayed count silently diverges from the number of hits recorded. The key
+-- makes the losing INSERT fail instead, which is the behaviour the code was written
+-- against. csnodupes kept its PRIMARY KEY; this one had been weakened to a plain KEY.
 CREATE TABLE IF NOT EXISTS `cshits` (
   `pageid` varchar(100) NOT NULL,
   `isunique` tinyint(1) NOT NULL,
   `hitcount` int(10) unsigned NOT NULL,
-  KEY `pageid` (`pageid`)
+  PRIMARY KEY (`pageid`, `isunique`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1 COLLATE=latin1_swedish_ci;
 
 CREATE TABLE IF NOT EXISTS `csnodupes` (
