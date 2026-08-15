@@ -94,6 +94,24 @@ pub async fn handle(State(state): State<AppState>, request: Request<Body>) -> Re
         return method_not_allowed(handler.allowed_methods());
     }
 
+    // Refuse cross-origin POSTs before anything with a side effect happens. Any
+    // third-party page can make a visitor's browser POST here, and the handler would
+    // then report that visitor's IP address to Google as a CrackStation submission,
+    // and record a hit under their address -- neither of which the visitor did.
+    //
+    // CORS response headers cannot prevent this. A form POST of
+    // application/x-www-form-urlencoded is a CORS "simple request", so there is no
+    // preflight: the browser sends it and the server runs the handler regardless, and
+    // Access-Control-Allow-Origin only governs whether the *calling page* may read the
+    // response. By then the side effect has happened. Refusing server-side on Origin
+    // is what actually stops it.
+    if method == Method::POST {
+        if let Err(reason) = crate::libs::csrf::check_origin(request.headers()) {
+            debug!("rejected cross-origin POST to {}: {}", path, reason);
+            return (StatusCode::FORBIDDEN, "Cross-origin POST rejected").into_response();
+        }
+    }
+
     // The body was already read by buffer_body_middleware, which runs outside
     // blocking_middleware on the async runtime. Reading it here would mean reading
     // it on a pool thread, where a dribbled body pins that thread uncancellably.
