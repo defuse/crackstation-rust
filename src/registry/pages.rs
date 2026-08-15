@@ -20,8 +20,6 @@ pub static PAGE_REGISTRY: LazyLock<HashMap<&'static str, PageInfo>> = LazyLock::
 
         // ===== Home page aliases =====
         alias!("index" => ""),
-        alias!("index.htm" => ""),
-        alias!("index.html" => ""),
         alias!("index.php" => ""),
 
         // ===== Content pages (metadata matches PHP's URLParse.php exactly) =====

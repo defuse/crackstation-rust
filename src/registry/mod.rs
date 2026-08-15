@@ -354,6 +354,32 @@ mod tests {
     }
 
     #[test]
+    /// Every spelling of the home page must still redirect to "/", and the doubled
+    /// extensions must not. `.php` is not stripped by resolve_path -- only `.htm` and
+    /// `.html` are -- so the "index.php" alias is load-bearing and "index" alone is
+    /// not sufficient. The "index.htm"/"index.html" aliases were dead for the URLs
+    /// they were written for (both strip to "index") and reachable only through
+    /// doubled extensions, which neither PHP nor the port intended to answer.
+    #[test]
+    fn test_home_page_aliases_cover_every_spelling_and_nothing_else() {
+        for path in ["/index", "/index.htm", "/index.html", "/index.php", "/INDEX.HTM"] {
+            match resolve_path(path) {
+                PathLookupResult::Redirect { canonical_path } => {
+                    assert_eq!(canonical_path, "/", "{path} must redirect to the home page");
+                }
+                other => panic!("expected Redirect for {path}, got {other:?}"),
+            }
+        }
+
+        for path in ["/index.htm.htm", "/index.htm.html", "/index.html.htm"] {
+            assert!(
+                matches!(resolve_path(path), PathLookupResult::NotFound),
+                "{path} must be a 404, not a redirect"
+            );
+        }
+    }
+
+    #[test]
     fn test_resolve_path_index_alias() {
         match resolve_path("/index") {
             PathLookupResult::Redirect { canonical_path } => {
