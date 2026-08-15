@@ -205,12 +205,21 @@ pub fn resolve_path(path: &str) -> PathLookupResult {
         return PathLookupResult::NotFound;
     }
 
-    // Detect and strip .htm or .html extension (case-insensitive)
+    // Detect and strip a page extension (case-insensitive).
+    //
+    // DIVERGENCE FROM PHP (intentional): PHP stripped only ".htm" -- its check was
+    // `strpos($page_name, ".htm") === strlen($page_name) - 4`, which does not match
+    // ".html" or ".php" -- and handled those two by hardcoding a $PAGE_INFO key per
+    // spelling, so only the four it happened to list resolved and everything else
+    // 404'd. Stripping all three generalises that: every page answers all of its
+    // spellings, and the hardcoded per-spelling aliases are no longer needed.
     let path_lower = path_without_slash.to_lowercase();
     let (name, _had_extension) = if path_lower.ends_with(".htm") {
         (&path_without_slash[..path_without_slash.len() - 4], true)
     } else if path_lower.ends_with(".html") {
         (&path_without_slash[..path_without_slash.len() - 5], true)
+    } else if path_lower.ends_with(".php") {
+        (&path_without_slash[..path_without_slash.len() - 4], true)
     } else {
         (path_without_slash, false)
     };
@@ -362,7 +371,9 @@ mod tests {
     /// doubled extensions, which neither PHP nor the port intended to answer.
     #[test]
     fn test_home_page_aliases_cover_every_spelling_and_nothing_else() {
-        for path in ["/index", "/index.htm", "/index.html", "/index.php", "/INDEX.HTM"] {
+        for path in [
+            "/index", "/index.htm", "/index.html", "/index.php", "/INDEX.HTM", "/INDEX.PHP",
+        ] {
             match resolve_path(path) {
                 PathLookupResult::Redirect { canonical_path } => {
                     assert_eq!(canonical_path, "/", "{path} must redirect to the home page");
@@ -371,7 +382,9 @@ mod tests {
             }
         }
 
-        for path in ["/index.htm.htm", "/index.htm.html", "/index.html.htm"] {
+        for path in [
+            "/index.htm.htm", "/index.htm.html", "/index.html.htm", "/index.php.php",
+        ] {
             assert!(
                 matches!(resolve_path(path), PathLookupResult::NotFound),
                 "{path} must be a 404, not a redirect"
