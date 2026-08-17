@@ -70,6 +70,100 @@ const MAX_BLOCKING_THREADS: usize = 4096;
 /// Keeping this at a quarter of the pool leaves peak demand at half the cap.
 const MAX_CONCURRENT_REQUESTS: usize = MAX_BLOCKING_THREADS / 4;
 
+/// Parse `USE_DEV_RECAPTCHA_KEY`.
+///
+/// The old comparison was `v == "true"` exactly, so `True`, `TRUE`, `1`, `yes` and
+/// `"true "` with a trailing space all evaluated to false — selecting the *production*
+/// site key while whatever secret is in the environment stays in place, and
+/// simultaneously suppressing the one log line that would have said so. An operator
+/// who wrote `TRUE` got the opposite of what they asked for, silently.
+///
+/// Anything unrecognised is a hard error rather than a default, because both defaults
+/// are wrong: assuming dev disables the captcha, assuming production makes the flag
+/// look ignored.
+fn parse_dev_recaptcha_flag(raw: Option<String>) -> bool {
+    let Some(raw) = raw else { return false };
+    match raw.trim().to_ascii_lowercase().as_str() {
+        "" => false,
+        "true" | "1" | "yes" | "on" => true,
+        "false" | "0" | "no" | "off" => false,
+        other => panic!(
+            "USE_DEV_RECAPTCHA_KEY is {other:?}, which is neither true nor false. \
+             Leaving it ambiguous would silently pick one: set it to true or false."
+        ),
+    }
+}
+
+/// Google's published always-pass reCAPTCHA test secret.
+///
+/// Documented at
+/// https://developers.google.com/recaptcha/docs/faq#id-like-to-run-automated-tests-with-recaptcha.-what-should-i-do
+/// and shipped in `dev/dotenv-example`. It validates *any* token, including an absent
+/// one, so a site holding it has no captcha at all.
+pub(crate) const GOOGLE_TEST_SECRET: &str = "6LeIxAcTAAAAAGG-vFI1TnRWxMZNFuojJ4WifJWe";
+
+/// Refuse to boot on a captcha configuration that does not protect anything.
+///
+/// The captcha has two halves chosen by two unrelated variables that never checked
+/// each other: `USE_DEV_RECAPTCHA_KEY` picks the *site key* the browser renders, and
+/// `RECAPTCHA_SECRET_KEY` is the *secret* that decides the verdict. Startup validated
+/// only that the secret was non-empty. That leaves four combinations, one of which is
+/// a total, invisible bypass:
+///
+/// | site key   | secret | what a visitor sees                     | outcome                  |
+/// |------------|--------|-----------------------------------------|--------------------------|
+/// | production | prod   | a real challenge                        | correct                  |
+/// | production | test   | a real challenge, indistinguishable     | **no captcha, silently** |
+/// | dev        | prod   | widget renders                          | dead for every user      |
+/// | dev        | test   | widget with Google's "testing" banner    | open, but visibly so     |
+///
+/// Every property of the system hid the second row: the production site key renders a
+/// genuine challenge with no banner, the server accepts an *empty* token so a bare
+/// `curl` loop works, and the one log line that existed fired only in the safe rows.
+/// The signalling was exactly inverted. It is also easy to land in — the README's only
+/// documented setup is to copy `dev/dotenv-example`, which ships a working always-pass
+/// secret, and nothing forces an operator to touch the captcha variables.
+fn check_captcha_config(use_dev_recaptcha: bool, secret: &str) {
+    let secret = secret.trim();
+
+    if secret.is_empty() {
+        panic!(
+            "RECAPTCHA_SECRET_KEY is empty. Google's siteverify fails closed on an empty \
+             secret, so every submission would be rejected and the site would be unusable."
+        );
+    }
+
+    match (use_dev_recaptcha, secret == GOOGLE_TEST_SECRET) {
+        // The dangerous cell: a real challenge that verifies against nothing.
+        (false, true) => panic!(
+            "RECAPTCHA_SECRET_KEY is Google's published test secret, but \
+             USE_DEV_RECAPTCHA_KEY is not set, so the browser is served the PRODUCTION \
+             site key. Visitors would be shown a genuine challenge, solve it, and be \
+             told nothing is wrong -- while the server accepted any token at all, \
+             including none. That is the site's only abuse control, absent and \
+             invisible. Set USE_DEV_RECAPTCHA_KEY=true for local development, or set a \
+             real secret for production."
+        ),
+        // Harmless but broken: the browser gets the test site key, which the real
+        // secret will not validate, so nobody can submit anything.
+        (true, false) => panic!(
+            "USE_DEV_RECAPTCHA_KEY is set, so the browser is served Google's test site \
+             key, but RECAPTCHA_SECRET_KEY is not the matching test secret. Every \
+             submission would fail verification and the crack form would be dead for \
+             every user."
+        ),
+        // Log the dangerous-looking case, not the safe one. This is the configuration
+        // where anyone can submit anything; say so in words rather than naming a
+        // variable at info level.
+        (true, true) => tracing::warn!(
+            "DEVELOPMENT CAPTCHA: using Google's test site key and test secret. \
+             Captcha verification accepts ANY token, including an absent one. Never \
+             run a public deployment like this."
+        ),
+        (false, false) => tracing::info!("reCAPTCHA configured with a production secret"),
+    }
+}
+
 fn main() {
     let runtime = tokio::runtime::Builder::new_multi_thread()
         .enable_all()
@@ -152,15 +246,10 @@ async fn async_main() {
     let phpcount = PhpCountService::connect(&phpcount_url).await.expect("Failed to connect to PHPCount database");
     tracing::info!("PHPCount database connected");
 
-    // Validate required env vars
-    std::env::var("RECAPTCHA_SECRET_KEY").expect("RECAPTCHA_SECRET_KEY must be set");
-
-    let use_dev_recaptcha = std::env::var("USE_DEV_RECAPTCHA_KEY")
-        .map(|v| v == "true")
-        .unwrap_or(false);
-    if use_dev_recaptcha {
-        tracing::info!("Using dev reCAPTCHA site key (USE_DEV_RECAPTCHA_KEY=true)");
-    }
+    let recaptcha_secret =
+        std::env::var("RECAPTCHA_SECRET_KEY").expect("RECAPTCHA_SECRET_KEY must be set");
+    let use_dev_recaptcha = parse_dev_recaptcha_flag(std::env::var("USE_DEV_RECAPTCHA_KEY").ok());
+    check_captcha_config(use_dev_recaptcha, &recaptcha_secret);
 
     // Initialize PreimageOracle from CRACKING_DIR
     tracing::info!("Loading hash lookup tables from {}...", cracking_dir.display());
@@ -256,5 +345,71 @@ mod tests {
             linked, WORDLIST_MIRROR_FILES,
             "the /files links on the wordlist page and WORDLIST_MIRROR_FILES disagree"
         );
+    }
+}
+
+#[cfg(test)]
+mod captcha_config_tests {
+    use super::{check_captcha_config, parse_dev_recaptcha_flag, GOOGLE_TEST_SECRET};
+
+    /// The old comparison was `v == "true"` exactly, so every one of these silently
+    /// meant "use the production site key" -- the opposite of what was written.
+    #[test]
+    fn flag_accepts_the_spellings_an_operator_actually_writes() {
+        for raw in ["true", "TRUE", "True", " true ", "1", "yes", "on", "ON"] {
+            assert!(
+                parse_dev_recaptcha_flag(Some(raw.to_string())),
+                "{raw:?} must mean dev"
+            );
+        }
+        for raw in ["false", "FALSE", "0", "no", "off", ""] {
+            assert!(
+                !parse_dev_recaptcha_flag(Some(raw.to_string())),
+                "{raw:?} must mean production"
+            );
+        }
+        assert!(!parse_dev_recaptcha_flag(None), "unset means production");
+    }
+
+    /// Neither default is safe, so an unrecognised value must not pick one.
+    #[test]
+    #[should_panic(expected = "neither true nor false")]
+    fn flag_refuses_an_ambiguous_value() {
+        parse_dev_recaptcha_flag(Some("maybe".to_string()));
+    }
+
+    /// The invisible bypass: a real challenge shown to visitors, verified against a
+    /// secret that accepts anything.
+    #[test]
+    #[should_panic(expected = "PRODUCTION site key")]
+    fn production_site_key_with_the_test_secret_refuses_to_boot() {
+        check_captcha_config(false, GOOGLE_TEST_SECRET);
+    }
+
+    /// Whitespace must not smuggle the test secret past the comparison.
+    #[test]
+    #[should_panic(expected = "PRODUCTION site key")]
+    fn the_test_secret_is_recognised_despite_whitespace() {
+        check_captcha_config(false, &format!("  {GOOGLE_TEST_SECRET}  "));
+    }
+
+    /// The mirror-image misconfiguration: the widget renders but nothing verifies.
+    #[test]
+    #[should_panic(expected = "dead for every user")]
+    fn dev_site_key_with_a_real_secret_refuses_to_boot() {
+        check_captcha_config(true, "a-real-production-secret");
+    }
+
+    #[test]
+    #[should_panic(expected = "fails closed on an empty secret")]
+    fn an_empty_secret_refuses_to_boot() {
+        check_captcha_config(false, "   ");
+    }
+
+    /// The two coherent configurations must boot.
+    #[test]
+    fn coherent_configurations_are_accepted() {
+        check_captcha_config(true, GOOGLE_TEST_SECRET);
+        check_captcha_config(false, "a-real-production-secret");
     }
 }

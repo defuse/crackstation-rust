@@ -43,5 +43,31 @@ pub async fn verify(token: &str, remote_ip: &str) -> Result<bool> {
         .await
         .context("failed to parse reCAPTCHA response JSON")?;
 
-    Ok(json["success"].as_bool().unwrap_or(false))
+    let success = json["success"].as_bool().unwrap_or(false);
+    let hostname = json["hostname"].as_str();
+
+    // Google names the domain the challenge was solved on, and hands back
+    // "testkey.google.com" for every verification made with its published test secret.
+    // That is the request-time signature of the configuration check_captcha_config
+    // refuses to boot on: a production site key paired with the test secret, where the
+    // visitor sees a real challenge and the server accepts anything.
+    //
+    // Startup already blocks that pairing, so reaching here means the secret changed
+    // underneath a running process -- the secret is re-read from the environment on
+    // every call. Treat it as a hard error rather than a failed captcha, so it is
+    // logged as infrastructure breakage instead of being shown to a visitor as their
+    // own mistake.
+    if hostname == Some(TEST_KEY_HOSTNAME) {
+        anyhow::bail!(
+            "reCAPTCHA verified against {TEST_KEY_HOSTNAME}, which means the request was \
+             checked with Google's test secret -- any token, including none, would be \
+             accepted. Refusing to treat this as a passed captcha."
+        );
+    }
+
+    Ok(success)
 }
+
+/// The hostname Google returns for any verification made with its published test
+/// secret, regardless of where the challenge was actually solved.
+const TEST_KEY_HOSTNAME: &str = "testkey.google.com";
