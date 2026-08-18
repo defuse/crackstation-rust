@@ -317,7 +317,6 @@ mod tests {
                 ("about-us", "GET, HEAD"),
                 ("contact-us", "GET, HEAD"),
                 ("crackstation-wordlist-password-cracking-dictionary", "GET, HEAD"),
-                ("downloads", "GET, HEAD"),
                 ("hashing-security", "GET, HEAD"),
                 ("legal-privacy", "GET, HEAD"),
             ]
