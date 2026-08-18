@@ -20,6 +20,13 @@ echo "Creating test wordlist at $WORDLIST..."
 # NOTE: the list ends with a deliberate empty line. Production's REALUNIQ.lst
 # contains one too — sha256("") cracks on the live site — so the empty word is
 # real dictionary data, and hashes of the empty string must keep resolving to it.
+#
+# The list also carries deliberately hostile entries, added below. Production's
+# wordlist is assembled from public breach dumps, so it genuinely contains markup,
+# whitespace-only passwords and bytes that are not valid UTF-8 — but every word here
+# used to be a tame lowercase ASCII string, so nothing a developer ran locally ever
+# exercised the HTML-escaping path, the whitespace-preservation path or the lossy
+# UTF-8 display path. A regression in any of them looked perfect in dev.
 cat > "$WORDLIST" << 'WORDS'
 password
 123456
@@ -74,8 +81,26 @@ cookie
 killer
 joshua
 matrix
-
+<script>alert(1)</script>
+<b>bold</b>
+a&b
+"quoted"
+it's
+ leading
+trailing 
+two  spaces
+	tabbed
+   
 WORDS
+
+# A word that is not valid UTF-8, which a quoted heredoc cannot carry. Production's
+# wordlist has these -- they are why NTLM's encoder returns None and the builder skips
+# a word, and why the results table has a lossy-UTF-8 display path at all.
+printf 'inv\xff\xfeword\n' >> "$WORDLIST"
+
+# Restore the deliberate empty final word. It must stay last: production's REALUNIQ.lst
+# ends with one, and sha256("") cracks on the live site.
+printf '\n' >> "$WORDLIST"
 
 # Create the "huge" wordlist. In production HUGELIST.lst is a larger dictionary
 # than REALUNIQ.lst; the md5-huge and sha1-huge tables use it as a fallback.
