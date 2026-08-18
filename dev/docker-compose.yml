@@ -1,6 +1,17 @@
 services:
   db:
-    image: mariadb:10.6
+    # MariaDB 10.6 went out of community support on 2026-07-06, so the dev database
+    # was running an unmaintained series behind a floating tag that could also move
+    # under the environment without notice. 11.8 is the current LTS, supported to
+    # 2028-06-04. Re-check that date when it approaches.
+    #
+    # NOT exercised on 11.8 yet: the bump was made where Docker is unavailable, so
+    # nothing here has actually started this image. dev/01-init.sql uses only
+    # long-standing features -- the MyISAM engine, latin1 declarations, and a
+    # two-column PRIMARY KEY -- all of which 11.x still supports, but watch the first
+    # `docker compose up` rather than assuming. Ideally match whatever production runs
+    # and say so here, so the dev database validates the production schema.
+    image: mariadb:11.8
     ports:
       - "3306:3306"
     environment:
