@@ -26,13 +26,24 @@ own.
 Your IP address and web browser information may be logged as you request web
 pages from this site. In addition, the footer of every page shows a hit counter,
 and so that the "Unique Hits" number does not count the same visitor twice, we
-store a one-way hash of the page name together with your IP address, along with
+store a one-way value derived from the page name and your IP address, along with
 the time of your visit. That record is deleted 30 days after your first visit to
-that page. The hash is not salted and both of its inputs are predictable, so
-anyone who obtained a copy of that database could work out which IP addresses
-are in it — please treat these records as identifying you rather than as
-anonymous. The hit counts themselves are plain totals with nothing in them that
-points back to any visitor, and we keep those indefinitely.
+that page.
+</p>
+<p>
+That value is computed with a random secret key that the server creates when it
+starts and holds only in memory. The key is never written to disk, is gone the
+moment the server restarts, and is replaced with a fresh one every 60 days. A
+copy of that database on its own therefore cannot be checked against your IP
+address: the stored value cannot be recomputed without the key, and the key does
+not outlive the running server. Anyone able to read the memory of the server
+while it is running could still make that connection, so this protects the
+records once they leave the machine rather than making them anonymous
+everywhere.
+</p>
+<p>
+The hit counts themselves are plain totals with nothing in them that points back
+to any visitor, and we keep those indefinitely.
 </p>
 
 <h3>Who else sees your IP address</h3>
