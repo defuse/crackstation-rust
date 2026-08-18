@@ -9,13 +9,19 @@ use super::{alias, page, PageInfo};
 pub static PAGE_REGISTRY: LazyLock<HashMap<&'static str, PageInfo>> = LazyLock::new(|| {
     let pages: &[PageInfo] = &[
         // ===== Home page (PHP specifies no metadata — uses defaults) =====
-        page! {
-            handler: home,
-            slug: "",
-            title: "",
-            description: "",
-            keywords: "",
-            legacy_hit_count_id: "pages/home.php",
+        // The only page whose response body carries anything a visitor would mind
+        // being left behind: it echoes the submitted hashes into the form and renders
+        // the recovered plaintexts.
+        PageInfo {
+            no_cache: true,
+            ..page! {
+                handler: home,
+                slug: "",
+                title: "",
+                description: "",
+                keywords: "",
+                legacy_hit_count_id: "pages/home.php",
+            }
         },
 
         // ===== Home page aliases =====
@@ -29,14 +35,6 @@ pub static PAGE_REGISTRY: LazyLock<HashMap<&'static str, PageInfo>> = LazyLock::
             description: "How to hash passwords properly using salt. Why hashes should be salted and how to use salt correctly.",
             keywords: "salt, salted hashing, secure password hashing, password hashing, proper way to hash passwords",
             legacy_hit_count_id: "pages/hashing-security.php",
-        },
-        page! {
-            handler: downloads,
-            slug: "downloads",
-            title: "CrackStation Tools & Downloads",
-            description: "Free tools & Downloads provided by CrackStation",
-            keywords: "hash tools, hash cracking, password cracking",
-            legacy_hit_count_id: "pages/downloads.php",
         },
         page! {
             handler: contact,

@@ -33,6 +33,14 @@ pub struct PageInfo {
 
     /// Redirect target - if Some, this page is an alias
     pub redirect: Option<&'static str>,
+
+    /// Whether responses for this page must never be cached.
+    ///
+    /// Set for pages whose response body contains something the visitor would not
+    /// want left in a shared browser's cache or history. On this site that is the
+    /// home page, which echoes the submitted hashes back into the form and renders
+    /// the recovered plaintexts.
+    pub no_cache: bool,
 }
 
 // Manual Clone implementation - needed because of dyn trait object
@@ -46,6 +54,7 @@ impl Clone for PageInfo {
             keywords: self.keywords,
             legacy_hit_count_id: self.legacy_hit_count_id,
             redirect: self.redirect,
+            no_cache: self.no_cache,
         }
     }
 }
@@ -58,6 +67,7 @@ impl std::fmt::Debug for PageInfo {
             .field("slug", &self.slug)
             .field("title", &self.title)
             .field("redirect", &self.redirect)
+            .field("no_cache", &self.no_cache)
             .finish_non_exhaustive()
     }
 }
@@ -108,6 +118,7 @@ impl PageInfo {
         keywords: "",
         legacy_hit_count_id: "",
         redirect: None,
+        no_cache: false,
     };
 
     /// Get the relative URL path for this page

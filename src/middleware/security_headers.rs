@@ -18,6 +18,15 @@ use tower::{Layer, Service};
 
 use super::url_canonicalization::is_dev_host;
 use crate::libs::util::is_https;
+use crate::registry::{resolve_path, PathLookupResult};
+
+/// Whether this path's page forbids caching.
+fn check_no_cache(path: &str) -> bool {
+    match resolve_path(path) {
+        PathLookupResult::Canonical(page) => page.no_cache,
+        _ => false,
+    }
+}
 
 /// Tower layer for security headers
 #[derive(Clone)]
@@ -72,6 +81,10 @@ where
 
         let is_dev = is_dev_host(&host);
 
+        // Resolved before the inner service runs, because the response no longer
+        // carries the path.
+        let is_no_cache_page = check_no_cache(req.uri().path());
+
         Box::pin(async move {
             let mut response = inner.call(req).await?;
             let headers = response.headers_mut();
@@ -108,6 +121,29 @@ where
                 header::REFERRER_POLICY,
                 "strict-origin-when-cross-origin".parse().expect("valid header value"),
             );
+
+            // Sensitive pages must not be left in a shared browser's cache or in its
+            // back/forward history. The submitted hashes and the recovered plaintexts
+            // are in this response body, and nothing else on the site is.
+            //
+            // Same set of headers defuse-rust sends for its password generator: the
+            // Expires date in the past and the Pragma line are for HTTP/1.0-era
+            // intermediaries that ignore Cache-Control, and cost nothing to send.
+            if is_no_cache_page {
+                let headers = response.headers_mut();
+                headers.insert(
+                    header::CACHE_CONTROL,
+                    "no-cache, no-store, must-revalidate".parse().expect("valid header value"),
+                );
+                headers.insert(
+                    header::EXPIRES,
+                    "Mon, 01 Jan 1990 00:00:00 GMT".parse().expect("valid header value"),
+                );
+                headers.insert(
+                    header::PRAGMA,
+                    "no-cache".parse().expect("valid header value"),
+                );
+            }
 
             // Allow belongs on a 405 and nowhere else. axum's MethodRouter stamps its
             // router-wide value (GET,HEAD,POST) onto any response from the method
