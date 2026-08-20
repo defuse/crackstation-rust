@@ -32,6 +32,7 @@ impl PageHandler for Handler {
 
     fn post(&self, ctx: PageContext, state: &AppState, body: PostBody) -> BoxFuture {
         let oracle = state.oracle.clone();
+        let serves_test_site_key = state.serves_test_site_key();
         Box::pin(async move {
             let form_data = form_urlencoded::parse(&body.0).collect::<Vec<_>>();
 
@@ -49,7 +50,13 @@ impl PageHandler for Handler {
 
             // Check captcha: either verify with Google or accept bypass header
             if !is_captcha_bypassed(&ctx) {
-                match libs::recaptcha::verify(&recaptcha_response, &ctx.client_ip).await {
+                match libs::recaptcha::verify(
+                    &recaptcha_response,
+                    &ctx.client_ip,
+                    serves_test_site_key,
+                )
+                .await
+                {
                     Ok(true) => {} // passed
                     Ok(false) => {
                         return HomePage {
