@@ -37,7 +37,7 @@ cd dev
 docker compose up -d
 cd ..
 
-# 2. Build the test hash indexes (small wordlist, ~50 words)
+# 2. Build the test hash indexes (small wordlist, ~90 words)
 #    This compiles the preimage CLI and creates indexes in dev/cracking/
 dev/setup-test-data.sh
 
@@ -58,9 +58,9 @@ The dev environment uses Google's
 [always-passing test reCAPTCHA key](https://developers.google.com/recaptcha/docs/faq#id-like-to-run-automated-tests-with-recaptcha.-what-should-i-do),
 so captcha verification will succeed for any input during development.
 
-The `dev/setup-test-data.sh` script creates a 51-word wordlist and builds indexes
-for md5, sha1, sha256, md4, md2, md5(md5), and NTLM. These are tiny (~700 bytes
-each) compared to the 190GB production data, but enough to verify cracking works.
+The `dev/setup-test-data.sh` script creates a 91-word wordlist and builds all 17
+indexes the server registers. These are tiny (~1 KB each) compared to the 190GB
+production data, but enough to verify cracking works.
 
 Test with:
 ```
