@@ -155,7 +155,7 @@ struct HomePage {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::cracking::CrackMatch;
+    use crate::cracking::{CrackMatch, NearMiss};
 
     /// Helper: compute SHA256 hex digest of a string, same as `is_captcha_bypassed` does.
     fn sha256_hex(input: &str) -> String {
@@ -240,14 +240,15 @@ mod tests {
                         CrackMatch {
                             plaintext: XSS.to_string(),
                             algorithm_name: XSS.to_string(),
-                            is_full_match: true,
-                            full_hash: None,
+                            near_miss: None,
                         },
                         CrackMatch {
                             plaintext: XSS.to_string(),
                             algorithm_name: XSS.to_string(),
-                            is_full_match: false,
-                            full_hash: Some(XSS.to_string()),
+                            near_miss: Some(NearMiss {
+                                matched: XSS.to_string(),
+                                rest: XSS.to_string(),
+                            }),
                         },
                     ],
                     total_matches: 2,
@@ -284,7 +285,10 @@ mod tests {
         );
         assert_eq!(
             line_containing(&html, "class=\"part\""),
-            format!("<tr class=\"part\"><td>{XSS_ESCAPED}</td><td>{XSS_ESCAPED}</td><td>{XSS_ESCAPED_PLAINTEXT}</td></tr>"),
+            format!(
+                "<tr class=\"part\"><td><span class=\"matched\">{XSS_ESCAPED}</span>{XSS_ESCAPED}</td>\
+                 <td>{XSS_ESCAPED}</td><td>{XSS_ESCAPED_PLAINTEXT}</td></tr>"
+            ),
             "partial-match row"
         );
         assert_eq!(
@@ -326,8 +330,7 @@ mod tests {
                     matches: vec![CrackMatch {
                         plaintext: plaintext.to_string(),
                         algorithm_name: "md5".to_string(),
-                        is_full_match: true,
-                        full_hash: None,
+                        near_miss: None,
                     }],
                     total_matches: 1,
                     format_error: false,
@@ -345,6 +348,42 @@ mod tests {
         }
     }
 
+    /// A near-miss row shows the digest that word really produces, not the query, with
+    /// the agreeing head marked. Without it a yellow row asserts a prefix matched and
+    /// gives the reader no way to see how much, or what the word actually hashes to.
+    #[test]
+    fn a_near_miss_row_shows_the_real_hash_with_the_matched_prefix_marked() {
+        let page = HomePage {
+            ctx: home_context(),
+            results: Some(vec![CrackResult {
+                hash: "d0763edaa9d9bd2a0000000000000000".to_string(),
+                matches: vec![CrackMatch {
+                    plaintext: "monkey".to_string(),
+                    algorithm_name: "md5".to_string(),
+                    near_miss: Some(NearMiss {
+                        matched: "d0763edaa9d9bd2a".to_string(),
+                        rest: "9516280e9044d885".to_string(),
+                    }),
+                }],
+                total_matches: 1,
+                format_error: false,
+            }]),
+            error: None,
+            submitted_hashes: String::new(),
+        };
+
+        let html = page.render().expect("must render");
+        assert_eq!(
+            line_containing(&html, "class=\"part\""),
+            "<tr class=\"part\"><td><span class=\"matched\">d0763edaa9d9bd2a</span>9516280e9044d885</td>\
+             <td>md5</td><td>monkey</td></tr>"
+        );
+        assert!(
+            !html.contains("d0763edaa9d9bd2a0000000000000000"),
+            "the query's wrong tail describes nothing and must not be shown as a digest"
+        );
+    }
+
     /// When a result set is capped the table must say so, with both numbers, rather
     /// than presenting the first twenty near misses as though they were all of them.
     #[test]
@@ -356,8 +395,10 @@ mod tests {
                 matches: vec![CrackMatch {
                     plaintext: "shown".to_string(),
                     algorithm_name: "md5".to_string(),
-                    is_full_match: false,
-                    full_hash: Some("dead".to_string()),
+                    near_miss: Some(NearMiss {
+                        matched: "dead".to_string(),
+                        rest: "beef".to_string(),
+                    }),
                 }],
                 total_matches: 4096,
                 format_error: false,
@@ -383,8 +424,7 @@ mod tests {
                 matches: vec![CrackMatch {
                     plaintext: "only".to_string(),
                     algorithm_name: "md5".to_string(),
-                    is_full_match: true,
-                    full_hash: None,
+                    near_miss: None,
                 }],
                 total_matches: 1,
                 format_error: false,

@@ -61,10 +61,10 @@ sha512, ripeMD160, whirlpool, MySQL 4.1+ (sha1(sha1_bin)), QubesV3.1BackupDefaul
 <tr class="fail"><td>{{ result.hash }}</td><td>Unknown</td><td>Not found.</td></tr>
 {% else %}
 {% for m in result.matches %}
-{% if m.is_full_match %}
+{% if m.is_full_match() %}
 <tr class="suc"><td>{{ result.hash }}</td><td>{{ m.algorithm_name }}</td><td>{{ m.plaintext_html()|safe }}</td></tr>
 {% else %}
-<tr class="part"><td>{{ result.hash }}</td><td>{{ m.algorithm_name }}</td><td>{{ m.plaintext_html()|safe }}</td></tr>
+<tr class="part"><td><span class="matched">{{ m.matched_prefix() }}</span>{{ m.unmatched_rest() }}</td><td>{{ m.algorithm_name }}</td><td>{{ m.plaintext_html()|safe }}</td></tr>
 {% endif %}
 {% endfor %}
 {% if result.is_truncated() %}
@@ -73,7 +73,7 @@ sha512, ripeMD160, whirlpool, MySQL 4.1+ (sha1(sha1_bin)), QubesV3.1BackupDefaul
 {% endif %}
 {% endfor %}
 </table>
-<p style="font-size: 8pt;"><strong>Color Codes:</strong> <span style="background-color: #00FF00;">Green:</span> Exact match, <span style="background-color: #FFFF00;">Yellow:</span> Partial match, <span style="background-color: #FF0000;">Red:</span> Not found.</p>
+<p style="font-size: 8pt;"><strong>Color Codes:</strong> <span style="background-color: #00FF00;">Green:</span> Exact match, <span style="background-color: #FFFF00;">Yellow:</span> Partial match &mdash; the hash column shows what that word really hashes to, with the <span class="matched">part yours matched</span> highlighted, <span style="background-color: #FF0000;">Red:</span> Not found.</p>
 {% endif %}
 </div>
 

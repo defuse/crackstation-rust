@@ -61,9 +61,84 @@ impl CrackMatch {
 pub struct CrackMatch {
     pub plaintext: String,
     pub algorithm_name: String,
-    pub is_full_match: bool,
-    /// Only present for partial matches — the full recomputed hash
-    pub full_hash: Option<String>,
+    /// `None` when the word hashes to exactly what was submitted. `Some` when only a
+    /// leading run agreed — see `NearMiss`.
+    ///
+    /// This is the only record of which kind of match this is, so the row colour and
+    /// the digest shown cannot disagree about it.
+    pub near_miss: Option<NearMiss>,
+}
+
+/// The digest a near-miss word really produces, split where it stops agreeing with the
+/// hash that was submitted.
+///
+/// A yellow row says "this word's hash starts the same as yours". Without the digest
+/// itself that claim is unfalsifiable — the reader cannot see how much matched, or what
+/// the word actually hashes to. Both halves are carried as plain text so the template
+/// escapes them like anything else; the highlight is a `<span>` the template adds
+/// around the first, never markup built here.
+pub struct NearMiss {
+    /// The leading part of the real digest that the submitted hash got right. Always at
+    /// least the 8-byte index prefix, which is why the entry was a candidate at all.
+    pub matched: String,
+    /// The remainder of the real digest, which the submitted hash did not have.
+    pub rest: String,
+}
+
+impl NearMiss {
+    /// Split `actual` at the point where it stops agreeing with `submitted`.
+    ///
+    /// The comparison is case-insensitive: `hex::encode` always produces lowercase, and
+    /// a visitor may paste an uppercase hash, so comparing directly would report that
+    /// nothing matched about a hash that was entirely right. The digest is shown as
+    /// produced, in lowercase, rather than echoing the submitted casing — it is the
+    /// dictionary word's hash being displayed, not the visitor's string.
+    fn new(submitted: &str, actual: &str) -> Self {
+        let matched_len = submitted
+            .chars()
+            .zip(actual.chars())
+            .take_while(|(s, a)| s.eq_ignore_ascii_case(a))
+            .count();
+
+        Self {
+            matched: actual[..matched_len].to_string(),
+            rest: actual[matched_len..].to_string(),
+        }
+    }
+}
+
+impl CrackMatch {
+    /// Whether the word hashes to exactly what was submitted.
+    pub fn is_full_match(&self) -> bool {
+        self.near_miss.is_none()
+    }
+
+    /// The leading part of the real digest that the submitted hash got right.
+    ///
+    /// # Panics
+    ///
+    /// Panics when called on a full match, where there is no second digest to show.
+    /// Only the partial-row branch of the template may call this.
+    pub fn matched_prefix(&self) -> &str {
+        &self
+            .near_miss
+            .as_ref()
+            .expect("matched_prefix is only meaningful for a near miss")
+            .matched
+    }
+
+    /// The remainder of the real digest, which the submitted hash did not have.
+    ///
+    /// # Panics
+    ///
+    /// Panics when called on a full match — see `matched_prefix`.
+    pub fn unmatched_rest(&self) -> &str {
+        &self
+            .near_miss
+            .as_ref()
+            .expect("unmatched_rest is only meaningful for a near miss")
+            .rest
+    }
 }
 
 /// Initialize the PreimageOracle from a directory containing .idx and .lst files.
@@ -155,38 +230,43 @@ pub fn crack_hashes(oracle: &PreimageOracle, hashes: &[String]) -> Vec<CrackResu
                 queried_hash,
                 matches,
                 total_matches,
-            } => CrackResult {
-                hash: queried_hash,
-                total_matches,
-                matches: matches
+            } => {
+                let matches = matches
                     .iter()
                     .map(|m| {
                         let lm = &m.lookup_match;
                         CrackMatch {
                             plaintext: lm.plaintext_lossy().into_owned(),
                             algorithm_name: lm.algorithm().name().to_string(),
-                            is_full_match: lm.is_full(),
-                            full_hash: if lm.is_full() {
+                            near_miss: if lm.is_full() {
                                 None
                             } else {
-                                Some(hex::encode(lm.recomputed_hash()))
+                                Some(NearMiss::new(
+                                    &queried_hash,
+                                    &hex::encode(lm.recomputed_hash()),
+                                ))
                             },
                         }
                     })
-                    .collect(),
-                format_error: false,
-            },
+                    .collect();
+
+                CrackResult {
+                    hash: queried_hash,
+                    total_matches,
+                    matches,
+                    format_error: false,
+                }
+            }
         })
         .collect()
 }
-
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use preimage::{IndexFile, Lm};
     use std::io::Write;
-    use tempfile::{NamedTempFile, TempDir};
+    use tempfile::TempDir;
 
     /// Build an oracle over a wordlist whose entries all land in one collision block.
     ///
@@ -195,7 +275,10 @@ mod tests {
     /// a single oversized block containing exactly one exact match and many near
     /// misses -- the shape a short-hash query produces against the production tables,
     /// and the one this limit exists for.
-    fn oracle_with_collision_block(count: usize, answer_at: usize) -> (PreimageOracle, String, TempDir) {
+    fn oracle_with_collision_block(
+        count: usize,
+        answer_at: usize,
+    ) -> (PreimageOracle, String, TempDir) {
         let dir = TempDir::new().expect("temp dir");
         let words_path = dir.path().join("words.lst");
         let mut words = std::fs::File::create(&words_path).expect("create wordlist");
@@ -250,7 +333,7 @@ mod tests {
     #[test]
     fn a_full_submission_is_bounded_at_twenty_by_twenty() {
         let (oracle, answer, _dir) = oracle_with_collision_block(200, 0);
-        let hashes: Vec<String> = std::iter::repeat(lm_hex(&answer)).take(20).collect();
+        let hashes = vec![lm_hex(&answer); 20];
 
         let results = crack_hashes(&oracle, &hashes);
         let rendered: usize = results.iter().map(|r| r.matches.len()).sum();
@@ -273,10 +356,120 @@ mod tests {
 
         assert_eq!(result.matches.len(), MAX_MATCHES_PER_HASH);
         assert!(
-            result.matches[0].is_full_match,
+            result.matches[0].is_full_match(),
             "the exact match must be kept, and shown first"
         );
         assert_eq!(result.matches[0].plaintext, answer);
+    }
+
+    /// The split point is where the two digests stop agreeing, which for a query
+    /// shorter than the digest is the whole of what was typed.
+    #[test]
+    fn a_short_query_matches_all_of_what_was_submitted() {
+        let actual = "d0763edaa9d9bd2a9516280e9044d885";
+        let near = NearMiss::new("d0763edaa9d9bd2a", actual);
+
+        assert_eq!(near.matched, "d0763edaa9d9bd2a");
+        assert_eq!(near.rest, "9516280e9044d885");
+    }
+
+    /// A full-length query that missed agrees only as far as the index prefix, and the
+    /// wrong tail the visitor supplied is not part of the digest being shown.
+    #[test]
+    fn a_full_length_miss_matches_only_the_index_prefix() {
+        let actual = "d0763edaa9d9bd2a9516280e9044d885";
+        let near = NearMiss::new("d0763edaa9d9bd2a0000000000000000", actual);
+
+        assert_eq!(near.matched, "d0763edaa9d9bd2a");
+        assert_eq!(near.rest, "9516280e9044d885");
+    }
+
+    /// Nothing pins the split to the prefix length: agreement past it is real and must
+    /// be shown as matched.
+    #[test]
+    fn agreement_beyond_the_index_prefix_counts() {
+        let actual = "d0763edaa9d9bd2a9516280e9044d885";
+        let near = NearMiss::new("d0763edaa9d9bd2a95160000000000ff", actual);
+
+        assert_eq!(near.matched, "d0763edaa9d9bd2a9516");
+        assert_eq!(near.rest, "280e9044d885");
+    }
+
+    /// An uppercase submission is the same hash. Comparing it directly would report
+    /// that none of it matched, on a row whose entire purpose is to say how much did.
+    #[test]
+    fn an_uppercase_submission_still_matches() {
+        let actual = "d0763edaa9d9bd2a9516280e9044d885";
+        let near = NearMiss::new("D0763EDAA9D9BD2A0000000000000000", actual);
+
+        assert_eq!(
+            near.matched, "d0763edaa9d9bd2a",
+            "shown as produced, in lowercase"
+        );
+        assert_eq!(near.rest, "9516280e9044d885");
+    }
+
+    /// A submission longer than the digest can still select the block. Everything the
+    /// digest has agreed, so there is nothing left to reveal.
+    #[test]
+    fn a_submission_longer_than_the_digest_leaves_no_remainder() {
+        let actual = "d0763edaa9d9bd2a9516280e9044d885";
+        let near = NearMiss::new(&format!("{actual}00000000"), actual);
+
+        assert_eq!(near.matched, actual);
+        assert_eq!(near.rest, "");
+    }
+
+    /// The digest shown on a near-miss row must be that word's own, not the query's,
+    /// and must reassemble to exactly it.
+    #[test]
+    fn near_miss_rows_carry_the_words_own_digest() {
+        let (oracle, answer, _dir) = oracle_with_collision_block(5, 0);
+        let queried = lm_hex(&answer);
+
+        let results = crack_hashes(&oracle, std::slice::from_ref(&queried));
+        let result = &results[0];
+
+        let near_misses: Vec<&CrackMatch> = result
+            .matches
+            .iter()
+            .filter(|m| !m.is_full_match())
+            .collect();
+        assert_eq!(
+            near_misses.len(),
+            4,
+            "one exact match and the rest of the block"
+        );
+
+        for near_miss in near_misses {
+            let shown = format!(
+                "{}{}",
+                near_miss.matched_prefix(),
+                near_miss.unmatched_rest()
+            );
+            assert_eq!(
+                shown,
+                lm_hex(&near_miss.plaintext),
+                "the row must show what {:?} actually hashes to",
+                near_miss.plaintext
+            );
+            assert_ne!(shown, queried, "a near miss does not hash to the query");
+            assert_eq!(
+                near_miss.matched_prefix(),
+                &queried[..16],
+                "the block was selected on the 8-byte index prefix, so it must agree"
+            );
+        }
+    }
+
+    /// A full match has no second digest, and asking for one is a template bug.
+    #[test]
+    #[should_panic(expected = "matched_prefix is only meaningful for a near miss")]
+    fn asking_a_full_match_for_a_matched_prefix_panics() {
+        let (oracle, answer, _dir) = oracle_with_collision_block(1, 0);
+        let results = crack_hashes(&oracle, &[lm_hex(&answer)]);
+
+        results[0].matches[0].matched_prefix();
     }
 
     /// An ordinary result set must not claim anything is hidden.

@@ -66,6 +66,14 @@ ul, ol {
     background-color: #FFFF00;
 }
 
+/* On a partial-match row, the leading run of the real digest that the submitted hash
+   got right. Green because that is already this page's word for "this matched" -- the
+   rest of the row stays yellow because the whole hash did not. */
+.matched
+{
+    background-color: #00FF00;
+}
+
 /* The row saying a result set was capped. Deliberately not one of the three result
    colours -- it is not a match, it is a note about the ones that are missing. */
 .more
