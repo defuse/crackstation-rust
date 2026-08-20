@@ -98,6 +98,17 @@ WORDS
 # a word, and why the results table has a lossy-UTF-8 display path at all.
 printf 'inv\xff\xfeword\n' >> "$WORDLIST"
 
+# A collision block larger than the results table will show. LM uppercases and hashes
+# the first seven characters into the index prefix, so every "password*" word lands in
+# one block: a query for LM("password") returns one exact match and every other entry
+# as a near miss. Production's tables are full of blocks like this -- shared prefixes
+# are what a password dictionary *is* -- but the dev list had four such words, well
+# under the display cap, so the truncation path and its "N more not shown" row never
+# ran locally. Thirty entries puts it ten over the cap.
+for SUFFIX in $(seq 3 28); do
+    echo "password$SUFFIX" >> "$WORDLIST"
+done
+
 # Restore the deliberate empty final word. It must stay last: production's REALUNIQ.lst
 # ends with one, and sha256("") cracks on the live site.
 printf '\n' >> "$WORDLIST"
