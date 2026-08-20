@@ -18,7 +18,7 @@ askama_axum = "0.4"
 sqlx = { version = "0.8.1", features = ["runtime-tokio-rustls", "mysql"] }
 
 # Hash lookups
-preimage = { version = "0.1.0", default-features = false }
+preimage = { version = "0.1.2", default-features = false }
 
 # HTTP client (for reCAPTCHA verification)
 reqwest = { version = "0.12", features = ["json"] }
@@ -50,3 +50,17 @@ subtle = "2.6"
 
 [build-dependencies]
 glob = "0.3"
+
+[dev-dependencies]
+tempfile = "3"
+
+# TEMPORARY -- DELETE THE MOMENT preimage 0.1.2 IS PUBLISHED.
+#
+# The per-hash match limit (PreimageOracle::crack_with_limit) does not exist in the
+# published 0.1.1, so this builds against the sibling checkout until then. A production
+# build will fail outright with this here, because /storage holds no ../preimage -- that
+# is deliberate. A loud failure at build time is the right outcome for "the crate this
+# depends on has not been released yet"; the alternative is shipping a server built from
+# whatever happens to be next to it.
+[patch.crates-io]
+preimage = { path = "../preimage/preimage" }
