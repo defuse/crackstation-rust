@@ -12,8 +12,23 @@ use preimage::{
 pub struct CrackResult {
     pub hash: String,
     pub matches: Vec<CrackMatch>,
+    /// How many matches existed for this hash across every table consulted, whether or
+    /// not they were kept. Larger than `matches.len()` when MAX_MATCHES_PER_HASH bit.
+    pub total_matches: usize,
     /// True when the input is not a valid hash format (non-hex, odd-length, or too short).
     pub format_error: bool,
+}
+
+impl CrackResult {
+    /// How many matches exist that are not being shown.
+    pub fn hidden_matches(&self) -> usize {
+        self.total_matches.saturating_sub(self.matches.len())
+    }
+
+    /// Whether the results table should say it is showing a subset.
+    pub fn is_truncated(&self) -> bool {
+        self.hidden_matches() > 0
+    }
 }
 
 impl CrackMatch {
@@ -103,6 +118,19 @@ pub fn init_oracle(cracking_dir: &Path) -> PreimageOracle {
     oracle
 }
 
+/// Most matches shown for any one submitted hash.
+///
+/// A collision block holds however many words share a hash prefix, and for a query
+/// shorter than the digest every one of them is a near miss by construction — so an
+/// uncapped lookup could return the whole block, allocate a display record per entry
+/// and render a table row per entry. The form already caps submissions at 20 hashes,
+/// so this bounds one request at 20 x 20 rows regardless of what was asked for.
+///
+/// This caps what is *shown*, not what is searched: every block is still walked, so the
+/// count of what is being withheld is exact, and the exact match is never the thing
+/// dropped (see `PreimageOracle::crack_with_limit`).
+pub const MAX_MATCHES_PER_HASH: usize = 20;
+
 /// Crack a list of hashes using the oracle.
 ///
 /// Returns one CrackResult per input hash, in the same order.
@@ -111,7 +139,7 @@ pub fn init_oracle(cracking_dir: &Path) -> PreimageOracle {
 pub fn crack_hashes(oracle: &PreimageOracle, hashes: &[String]) -> Vec<CrackResult> {
     let hash_refs: Vec<&str> = hashes.iter().map(|h| h.as_str()).collect();
     let results = oracle
-        .crack(&hash_refs, true) // early_exit = true (matches PHP)
+        .crack_with_limit(&hash_refs, true, MAX_MATCHES_PER_HASH) // early_exit = true (matches PHP)
         .expect("oracle lookup failed — index or dictionary file may be corrupted or missing");
 
     results
@@ -120,13 +148,16 @@ pub fn crack_hashes(oracle: &PreimageOracle, hashes: &[String]) -> Vec<CrackResu
             HashResult::InvalidFormat { input } => CrackResult {
                 hash: input,
                 matches: Vec::new(),
+                total_matches: 0,
                 format_error: true,
             },
             HashResult::Lookup {
                 queried_hash,
                 matches,
+                total_matches,
             } => CrackResult {
                 hash: queried_hash,
+                total_matches,
                 matches: matches
                     .iter()
                     .map(|m| {
@@ -149,3 +180,116 @@ pub fn crack_hashes(oracle: &PreimageOracle, hashes: &[String]) -> Vec<CrackResu
         .collect()
 }
 
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use preimage::{IndexFile, Lm};
+    use std::io::Write;
+    use tempfile::{NamedTempFile, TempDir};
+
+    /// Build an oracle over a wordlist whose entries all land in one collision block.
+    ///
+    /// LM's index prefix is DES of the uppercased first seven characters, so every word
+    /// starting "PASSWOR" collides while hashing to a different full digest. That gives
+    /// a single oversized block containing exactly one exact match and many near
+    /// misses -- the shape a short-hash query produces against the production tables,
+    /// and the one this limit exists for.
+    fn oracle_with_collision_block(count: usize, answer_at: usize) -> (PreimageOracle, String, TempDir) {
+        let dir = TempDir::new().expect("temp dir");
+        let words_path = dir.path().join("words.lst");
+        let mut words = std::fs::File::create(&words_path).expect("create wordlist");
+        let mut answer = String::new();
+        for i in 0..count {
+            let word = format!("PASSWORD{i:03}");
+            if i == answer_at {
+                answer = word.clone();
+            }
+            writeln!(words, "{word}").expect("write");
+        }
+        words.flush().expect("flush");
+
+        let index_path = dir.path().join("lm.idx");
+        let index = IndexFile::build(&Lm, &words_path, &index_path, None).expect("build");
+        index.sort(1024 * 1024, None).expect("sort");
+
+        let mut oracle = PreimageOracle::new();
+        oracle
+            .register("lm", LM, &index_path, &words_path)
+            .expect("register");
+
+        (oracle, answer, dir)
+    }
+
+    fn lm_hex(word: &str) -> String {
+        hex::encode(Lm.hash(word.as_bytes()).expect("lm hash"))
+    }
+
+    /// The limit reaches the oracle, and the count needed to report it survives.
+    #[test]
+    fn a_large_collision_block_is_capped_at_the_display_limit() {
+        let block = MAX_MATCHES_PER_HASH * 5;
+        let (oracle, answer, _dir) = oracle_with_collision_block(block, 0);
+
+        let results = crack_hashes(&oracle, &[lm_hex(&answer)]);
+        assert_eq!(results.len(), 1);
+        let result = &results[0];
+
+        assert_eq!(
+            result.matches.len(),
+            MAX_MATCHES_PER_HASH,
+            "a block of {block} must be cut to the display limit"
+        );
+        assert_eq!(result.total_matches, block, "the real count must survive");
+        assert!(result.is_truncated());
+        assert_eq!(result.hidden_matches(), block - MAX_MATCHES_PER_HASH);
+    }
+
+    /// The whole point of the cap is bounding one request, so check the arithmetic the
+    /// form's own 20-hash cap combines with.
+    #[test]
+    fn a_full_submission_is_bounded_at_twenty_by_twenty() {
+        let (oracle, answer, _dir) = oracle_with_collision_block(200, 0);
+        let hashes: Vec<String> = std::iter::repeat(lm_hex(&answer)).take(20).collect();
+
+        let results = crack_hashes(&oracle, &hashes);
+        let rendered: usize = results.iter().map(|r| r.matches.len()).sum();
+
+        assert_eq!(results.len(), 20);
+        assert_eq!(
+            rendered,
+            20 * MAX_MATCHES_PER_HASH,
+            "20 hashes x {MAX_MATCHES_PER_HASH} matches is the ceiling for one request"
+        );
+    }
+
+    /// The cap must never be the reason a crackable hash reports nothing.
+    #[test]
+    fn the_answer_survives_even_when_it_sits_past_the_limit() {
+        let (oracle, answer, _dir) = oracle_with_collision_block(100, 90);
+
+        let results = crack_hashes(&oracle, &[lm_hex(&answer)]);
+        let result = &results[0];
+
+        assert_eq!(result.matches.len(), MAX_MATCHES_PER_HASH);
+        assert!(
+            result.matches[0].is_full_match,
+            "the exact match must be kept, and shown first"
+        );
+        assert_eq!(result.matches[0].plaintext, answer);
+    }
+
+    /// An ordinary result set must not claim anything is hidden.
+    #[test]
+    fn a_small_result_set_is_not_marked_truncated() {
+        let (oracle, answer, _dir) = oracle_with_collision_block(3, 0);
+
+        let results = crack_hashes(&oracle, &[lm_hex(&answer)]);
+        let result = &results[0];
+
+        assert_eq!(result.matches.len(), 3);
+        assert_eq!(result.total_matches, 3);
+        assert!(!result.is_truncated());
+        assert_eq!(result.hidden_matches(), 0);
+    }
+}

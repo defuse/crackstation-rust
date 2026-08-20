@@ -26,8 +26,6 @@ checksum = "683d7910e743518b0e34f1186f92494becacb047c7b6bf616c96772180fef923"
 [[package]]
 name = "allthehashes"
 version = "0.1.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2a205d32f36d9a3fa16d662def21ddb3ed25777da939d3db5ab49f4b7eacb20f"
 dependencies = [
  "adler2",
  "crc",
@@ -353,6 +351,7 @@ dependencies = [
  "sha2",
  "sqlx",
  "subtle",
+ "tempfile",
  "tokio",
  "tower",
  "tower-http",
@@ -1483,16 +1482,13 @@ dependencies = [
 
 [[package]]
 name = "preimage"
-version = "0.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "725ec200eaeea7a333f971fea81478f2cd8f603380dd097c79cde6db139a70c0"
+version = "0.1.2"
 dependencies = [
  "allthehashes",
  "anyhow",
  "hex",
  "indicatif",
  "memmap2",
- "thiserror",
 ]
 
 [[package]]

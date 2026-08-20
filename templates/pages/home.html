@@ -67,6 +67,9 @@ sha512, ripeMD160, whirlpool, MySQL 4.1+ (sha1(sha1_bin)), QubesV3.1BackupDefaul
 <tr class="part"><td>{{ result.hash }}</td><td>{{ m.algorithm_name }}</td><td>{{ m.plaintext_html()|safe }}</td></tr>
 {% endif %}
 {% endfor %}
+{% if result.is_truncated() %}
+<tr class="more"><td>{{ result.hash }}</td><td>&nbsp;</td><td>{{ result.hidden_matches() }} more not shown (of {{ result.total_matches }} total).</td></tr>
+{% endif %}
 {% endif %}
 {% endfor %}
 </table>

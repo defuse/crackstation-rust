@@ -243,11 +243,13 @@ mod tests {
                             full_hash: Some(XSS.to_string()),
                         },
                     ],
+                    total_matches: 2,
                     format_error: false,
                 },
                 CrackResult {
                     hash: XSS.to_string(),
                     matches: Vec::new(),
+                    total_matches: 0,
                     format_error: true,
                 },
             ]),
@@ -320,6 +322,7 @@ mod tests {
                         is_full_match: true,
                         full_hash: None,
                     }],
+                    total_matches: 1,
                     format_error: false,
                 }]),
                 error: None,
@@ -335,6 +338,61 @@ mod tests {
         }
     }
 
+    /// When a result set is capped the table must say so, with both numbers, rather
+    /// than presenting the first twenty near misses as though they were all of them.
+    #[test]
+    fn a_truncated_result_set_says_how_much_is_hidden() {
+        let page = HomePage {
+            ctx: home_context(),
+            results: Some(vec![CrackResult {
+                hash: "abc".to_string(),
+                matches: vec![CrackMatch {
+                    plaintext: "shown".to_string(),
+                    algorithm_name: "md5".to_string(),
+                    is_full_match: false,
+                    full_hash: Some("dead".to_string()),
+                }],
+                total_matches: 4096,
+                format_error: false,
+            }]),
+            error: None,
+            submitted_hashes: String::new(),
+        };
+
+        let html = page.render().expect("must render");
+        assert_eq!(
+            line_containing(&html, "class=\"more\""),
+            "<tr class=\"more\"><td>abc</td><td>&nbsp;</td><td>4095 more not shown (of 4096 total).</td></tr>"
+        );
+    }
+
+    /// An uncapped result set must not gain a row claiming nothing is hidden.
+    #[test]
+    fn an_untruncated_result_set_gets_no_extra_row() {
+        let page = HomePage {
+            ctx: home_context(),
+            results: Some(vec![CrackResult {
+                hash: "abc".to_string(),
+                matches: vec![CrackMatch {
+                    plaintext: "only".to_string(),
+                    algorithm_name: "md5".to_string(),
+                    is_full_match: true,
+                    full_hash: None,
+                }],
+                total_matches: 1,
+                format_error: false,
+            }]),
+            error: None,
+            submitted_hashes: String::new(),
+        };
+
+        let html = page.render().expect("must render");
+        assert!(
+            !html.contains("class=\"more\""),
+            "no truncation row when nothing was truncated"
+        );
+    }
+
     /// The "Not found." row is the other arm of the results table and interpolates the
     /// submitted hash, so it needs escaping too.
     #[test]
@@ -344,6 +402,7 @@ mod tests {
             results: Some(vec![CrackResult {
                 hash: XSS.to_string(),
                 matches: Vec::new(),
+                total_matches: 0,
                 format_error: false,
             }]),
             error: None,

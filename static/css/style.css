@@ -66,6 +66,14 @@ ul, ol {
     background-color: #FFFF00;
 }
 
+/* The row saying a result set was capped. Deliberately not one of the three result
+   colours -- it is not a match, it is a note about the ones that are missing. */
+.more
+{
+    background-color: #DDDDDD;
+    font-style: italic;
+}
+
 .ic{
     color:#000000;
     font-family: monospace;
