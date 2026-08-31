@@ -251,6 +251,10 @@ async fn async_main() {
     let use_dev_recaptcha = parse_dev_recaptcha_flag(std::env::var("USE_DEV_RECAPTCHA_KEY").ok());
     check_captcha_config(use_dev_recaptcha, &recaptcha_secret);
 
+    // Build the captcha HTTP client now rather than on the first POST, so a TLS backend
+    // that cannot initialise is a boot failure instead of a mystery 500 later.
+    libs::recaptcha::http_client();
+
     // Initialize PreimageOracle from CRACKING_DIR
     tracing::info!("Loading hash lookup tables from {}...", cracking_dir.display());
     let oracle = cracking::init_oracle(&cracking_dir);
