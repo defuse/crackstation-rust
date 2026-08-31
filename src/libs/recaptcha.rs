@@ -83,14 +83,17 @@ fn is_plausible_token(token: &str) -> bool {
 ///
 /// # Errors
 ///
-/// Returns an error on network failure, JSON parse failure, or missing
-/// `RECAPTCHA_SECRET_KEY` env var (should not happen if startup validates it).
+/// Returns an error when the verification could not be completed: the request to Google
+/// failed or timed out, the response could not be read or parsed, or
+/// `RECAPTCHA_SECRET_KEY` is absent from the environment.
 ///
-/// # Panics
-///
-/// Panics if `RECAPTCHA_SECRET_KEY` is not set. This is intentional — the env
-/// var is validated at startup in main.rs, so a missing value here indicates a
-/// programming error, not a runtime condition.
+/// Every one of those is an infrastructure fault rather than a visitor mistake, and the
+/// caller distinguishes them: `Ok(false)` renders "Incorrect captcha", `Err` renders
+/// "Could not verify captcha (server error)". A missing secret used to panic here on the
+/// grounds that startup validates it. Startup does still validate it, but the
+/// environment can change under a running process, and reporting that as the
+/// infrastructure fault it is beats taking down the request with a panic the operator
+/// then has to read a stack trace to understand.
 pub async fn verify(token: &str, remote_ip: &str, serves_test_site_key: bool) -> Result<bool> {
     if !is_plausible_token(token) {
         tracing::warn!(
@@ -103,7 +106,7 @@ pub async fn verify(token: &str, remote_ip: &str, serves_test_site_key: bool) ->
     }
 
     let secret = std::env::var("RECAPTCHA_SECRET_KEY")
-        .expect("RECAPTCHA_SECRET_KEY must be set (validated at startup)");
+        .context("RECAPTCHA_SECRET_KEY is not set, so no captcha can be verified")?;
 
     let mut resp = http_client()
         .post("https://www.google.com/recaptcha/api/siteverify")
