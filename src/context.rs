@@ -12,7 +12,6 @@ pub struct PageContext {
     /// PageInfo holds all the page metadata (title, keywords, description, etc.)
     pub page_info: &'static PageInfo,
     pub client_ip: String,
-    pub dnt_enabled: bool,
     pub hit_counts: HitCounts,
     /// CAPTCHA bypass header (256-bit secret) for automated testing
     pub captcha_bypass_header: Option<BypassSecret>,

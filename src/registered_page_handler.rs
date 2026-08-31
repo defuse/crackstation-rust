@@ -35,13 +35,6 @@ pub async fn handle(State(state): State<AppState>, request: Request<Body>) -> Re
         .ip();
     let client_ip = client_ip(connection_ip, request.headers()).to_string();
 
-    let dnt_enabled = request
-        .headers()
-        .get(header::DNT)
-        .and_then(|v| v.to_str().ok())
-        .map(|v| v == "1")
-        .unwrap_or(false);
-
     let user_agent = request
         .headers()
         .get(header::USER_AGENT)
@@ -73,7 +66,7 @@ pub async fn handle(State(state): State<AppState>, request: Request<Body>) -> Re
     let page_info = match resolve_path(&path) {
         PathLookupResult::Canonical(page) => page,
         PathLookupResult::NotFound => {
-            return render_not_found(client_ip, dnt_enabled);
+            return render_not_found(client_ip);
         }
         PathLookupResult::Redirect { canonical_path } => {
             // Middleware should have already redirected. This is a bug.
@@ -136,7 +129,6 @@ pub async fn handle(State(state): State<AppState>, request: Request<Body>) -> Re
     let ctx = PageContext {
         page_info,
         client_ip,
-        dnt_enabled,
         hit_counts,
         captcha_bypass_header,
         query_string,
@@ -193,12 +185,7 @@ pub async fn handle_unsupported_method(
         // every method, verified with `PUT /index.htm` answering 301.
         PathLookupResult::Redirect { .. } | PathLookupResult::NotFound => {
             let client_ip = client_ip(connection_addr.ip(), &headers).to_string();
-            let dnt_enabled = headers
-                .get(header::DNT)
-                .and_then(|v| v.to_str().ok())
-                .map(|v| v == "1")
-                .unwrap_or(false);
-            render_not_found(client_ip, dnt_enabled)
+            render_not_found(client_ip)
         }
     }
 }
@@ -232,11 +219,10 @@ async fn record_and_get_hits(
 }
 
 /// Render the 404 not found page.
-fn render_not_found(client_ip: String, dnt_enabled: bool) -> Response {
+fn render_not_found(client_ip: String) -> Response {
     let ctx = PageContext {
         page_info: &NOT_FOUND_PAGE_INFO,
         client_ip,
-        dnt_enabled,
         hit_counts: HitCounts::default(),
         captcha_bypass_header: None,
         query_string: None,

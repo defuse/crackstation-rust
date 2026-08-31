@@ -201,7 +201,6 @@ mod tests {
             // The home page is registered under the empty slug.
             page_info: crate::registry::lookup_page("").expect("home page must be registered"),
             client_ip: "192.0.2.1".to_string(),
-            dnt_enabled: false,
             hit_counts: crate::libs::phpcount::HitCounts::default(),
             captcha_bypass_header: None,
             query_string: None,
