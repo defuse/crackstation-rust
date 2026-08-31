@@ -280,8 +280,6 @@ fn resolve_alias(page: &'static PageInfo) -> &'static PageInfo {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     /// The counter identifier must be the page key PHP counted under, and for every page
     /// on this site that is the same string the port uses as its slug.
     ///
@@ -314,7 +312,6 @@ mod tests {
             );
         }
     }
-
 
     use super::*;
 
