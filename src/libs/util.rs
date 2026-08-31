@@ -20,6 +20,24 @@ const TRUSTED_PROXIES: &[IpAddr] = &[
 /// one.
 const TRUSTED_HOPS: usize = 1;
 
+/// Whether a peer address is one of our own proxies.
+///
+/// Canonicalises first, which is load-bearing rather than tidy. A socket bound to `[::]`
+/// accepts IPv4 connections and reports their peer as an IPv4-mapped address:
+/// `::ffff:127.0.0.1`, which is not equal to `127.0.0.1` and matches nothing in
+/// `TRUSTED_PROXIES`. The forwarding headers would then be ignored on every request,
+/// `is_https` would be false for all of them, and the HTTPS-enforcement redirect would
+/// bounce each one straight back to a proxy that forwards it again -- an infinite 301
+/// loop taking the whole site down, with every visitor collapsed onto one identity for
+/// good measure.
+///
+/// `LISTEN_ADDR` is environment-configurable while this list is not, so that outage was
+/// one character of deployment config away and nothing anywhere said so. `to_canonical`
+/// maps the v4-mapped form back to plain IPv4 and removes the trap.
+fn is_trusted_proxy(connection_ip: IpAddr) -> bool {
+    TRUSTED_PROXIES.contains(&connection_ip.to_canonical())
+}
+
 /// The client address, as vouched for by our own proxy.
 ///
 /// `X-Forwarded-For` is a chain that each hop *appends* to, so it arrives as
@@ -42,7 +60,9 @@ const TRUSTED_HOPS: usize = 1;
 /// absent, too short or unparseable falls back to the peer address rather than being
 /// passed along as-is.
 pub fn client_ip(connection_ip: IpAddr, headers: &HeaderMap) -> IpAddr {
-    if !TRUSTED_PROXIES.contains(&connection_ip) {
+    let connection_ip = connection_ip.to_canonical();
+
+    if !is_trusted_proxy(connection_ip) {
         // Direct connection - use the actual peer, ignore any headers.
         return connection_ip;
     }
@@ -93,7 +113,7 @@ pub fn client_ip(connection_ip: IpAddr, headers: &HeaderMap) -> IpAddr {
 /// SECURITY: Only trusts X-Forwarded-Proto when the connection comes from a
 /// trusted proxy IP, to prevent clients from spoofing the protocol.
 pub fn is_https(connection_ip: IpAddr, headers: &HeaderMap) -> bool {
-    if TRUSTED_PROXIES.contains(&connection_ip) {
+    if is_trusted_proxy(connection_ip) {
         headers
             .get("x-forwarded-proto")
             .and_then(|h| h.to_str().ok())
@@ -234,6 +254,67 @@ mod tests {
             "10.0.0.1,   203.0.113.9  ".parse().unwrap(),
         );
         assert_eq!(client_ip(LOCALHOST_V4, &headers), ip("203.0.113.9"));
+    }
+
+    // ---- client_ip: address families ----
+
+    /// A socket bound to `[::]` reports an IPv4 peer as `::ffff:127.0.0.1`. Our own
+    /// proxy must still be recognised through that form, or every request is treated as
+    /// untrusted and the site redirect-loops itself off the internet.
+    #[test]
+    fn an_ipv4_mapped_proxy_is_still_trusted() {
+        let mut headers = HeaderMap::new();
+        headers.insert("x-forwarded-for", "203.0.113.9".parse().unwrap());
+
+        assert_eq!(
+            client_ip(ip("::ffff:127.0.0.1"), &headers),
+            ip("203.0.113.9"),
+            "the v4-mapped form of loopback is the same proxy"
+        );
+    }
+
+    /// The peer we fall back to is reported in its canonical form, so one client does
+    /// not become two identities depending on which socket family accepted it.
+    #[test]
+    fn a_mapped_peer_falls_back_to_its_canonical_form() {
+        assert_eq!(
+            client_ip(ip("::ffff:127.0.0.1"), &HeaderMap::new()),
+            LOCALHOST_V4
+        );
+    }
+
+    #[test]
+    fn a_mapped_untrusted_peer_is_reported_canonically() {
+        let mut headers = HeaderMap::new();
+        headers.insert("x-forwarded-for", "198.51.100.42".parse().unwrap());
+
+        assert_eq!(client_ip(ip("::ffff:203.0.113.50"), &headers), EXTERNAL_IP);
+    }
+
+    /// Canonicalisation must not widen the trusted set: a v4-mapped address that is not
+    /// loopback is still an outsider.
+    #[test]
+    fn canonicalising_does_not_trust_anything_new() {
+        let mut headers = HeaderMap::new();
+        headers.insert("x-forwarded-for", "198.51.100.42".parse().unwrap());
+
+        for peer in ["::ffff:203.0.113.50", "::ffff:10.0.0.1", "2001:db8::1"] {
+            assert_eq!(
+                client_ip(ip(peer), &headers),
+                ip(peer).to_canonical(),
+                "{peer} must not be treated as our proxy"
+            );
+        }
+    }
+
+    /// is_https reads the same trust decision, so it inherits the same trap.
+    #[test]
+    fn is_https_trusts_an_ipv4_mapped_proxy() {
+        let mut headers = HeaderMap::new();
+        headers.insert("x-forwarded-proto", "https".parse().unwrap());
+
+        assert!(is_https(ip("::ffff:127.0.0.1"), &headers));
+        assert!(!is_https(ip("::ffff:203.0.113.50"), &headers));
     }
 
     // ---- client_ip: untrusted source ----
