@@ -28,7 +28,19 @@ pub struct PageInfo {
     /// Meta keywords (empty = use DEFAULT_META_KEYWORDS)
     pub keywords: &'static str,
 
-    /// Legacy hit counter ID from PHP version.
+    /// The identifier this page's hits are counted under, carried over from the PHP
+    /// site so the published counters continue rather than restarting at zero.
+    ///
+    /// This must be the value PHP passed to `PHPCount::AddHit`, which was
+    /// `URLParse::ProcessURL()`'s return -- the **`$PAGE_INFO` array key**, not the
+    /// include path. The two are different fields of the same entry, and the include
+    /// path is the wrong one: it was used only to `require` the page.
+    ///
+    /// Every alias key (`"index"`, `"index.html"`, `"index.php"` for the home page)
+    /// redirected via `permRedirect`, which calls `die()`, so `AddHit` was never reached
+    /// for them. Exactly one key per page ever accumulated hits, and it is the same
+    /// string this port uses as the slug -- which is why `slug_is_the_hit_counter_id`
+    /// asserts they match.
     pub legacy_hit_count_id: &'static str,
 
     /// Redirect target - if Some, this page is an alias
@@ -268,6 +280,42 @@ fn resolve_alias(page: &'static PageInfo) -> &'static PageInfo {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+
+    /// The counter identifier must be the page key PHP counted under, and for every page
+    /// on this site that is the same string the port uses as its slug.
+    ///
+    /// Getting this wrong does not fail loudly: the site serves normally and every
+    /// published counter silently restarts at zero while new hits accumulate under a key
+    /// that matches no history. It was wrong until 2026-08-31 -- the values were the PHP
+    /// *include paths*, copied from defuse-rust, whose PHP genuinely did count under the
+    /// include path. crackstation's did not.
+    #[test]
+    fn slug_is_the_hit_counter_id() {
+        for page in crate::registry::pages::PAGE_REGISTRY.values() {
+            if page.redirect.is_some() {
+                // An alias 301s from the canonicalization middleware, before the handler
+                // that counts hits -- exactly as PHP's permRedirect died before AddHit.
+                // It has no hits of its own and must not claim an identifier.
+                assert_eq!(
+                    page.hit_counter_id(),
+                    "",
+                    "alias {:?} would count hits under its own key",
+                    page.slug
+                );
+                continue;
+            }
+
+            assert_eq!(
+                page.hit_counter_id(),
+                page.slug,
+                "page {:?} would count under a key PHP never used, resetting its counter",
+                page.slug
+            );
+        }
+    }
+
+
     use super::*;
 
     /// PHP's $PAGE_INFO redirects this legacy URL to the wordlist page. Both the

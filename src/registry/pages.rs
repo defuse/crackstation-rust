@@ -20,7 +20,7 @@ pub static PAGE_REGISTRY: LazyLock<HashMap<&'static str, PageInfo>> = LazyLock::
                 title: "",
                 description: "",
                 keywords: "",
-                legacy_hit_count_id: "pages/home.php",
+                legacy_hit_count_id: "",
             }
         },
 
@@ -34,7 +34,7 @@ pub static PAGE_REGISTRY: LazyLock<HashMap<&'static str, PageInfo>> = LazyLock::
             title: "Secure Salted Password Hashing - How to do it Properly",
             description: "How to hash passwords properly using salt. Why hashes should be salted and how to use salt correctly.",
             keywords: "salt, salted hashing, secure password hashing, password hashing, proper way to hash passwords",
-            legacy_hit_count_id: "pages/hashing-security.php",
+            legacy_hit_count_id: "hashing-security",
         },
         page! {
             handler: contact,
@@ -42,7 +42,7 @@ pub static PAGE_REGISTRY: LazyLock<HashMap<&'static str, PageInfo>> = LazyLock::
             title: "CrackStation Contact",
             description: "Instructions for contacting CrackStation",
             keywords: "crackstation contact",
-            legacy_hit_count_id: "pages/contactus.php",
+            legacy_hit_count_id: "contact-us",
         },
         // NOTE: PHP has title "CrackStation Contact" and keywords "crackstation contact"
         // for this page too — appears to be a copy-paste error, but we match it exactly.
@@ -52,7 +52,7 @@ pub static PAGE_REGISTRY: LazyLock<HashMap<&'static str, PageInfo>> = LazyLock::
             title: "CrackStation Contact",
             description: "What CrackStation is and why we exist",
             keywords: "crackstation contact",
-            legacy_hit_count_id: "pages/aboutus.php",
+            legacy_hit_count_id: "about-us",
         },
         page! {
             handler: wordlist,
@@ -60,7 +60,7 @@ pub static PAGE_REGISTRY: LazyLock<HashMap<&'static str, PageInfo>> = LazyLock::
             title: "CrackStation's Password Cracking Dictionary (Pay what you want!)",
             description: "Download CrackStation's password cracking wordlist.",
             keywords: "password cracking wordlist, biggest password cracking wordlist, cracking dictionary",
-            legacy_hit_count_id: "pages/buy-crackstation-wordlist-cracking-dictionary.php",
+            legacy_hit_count_id: "crackstation-wordlist-password-cracking-dictionary",
         },
 
         // Legacy URL for the wordlist page, still linked from elsewhere.
@@ -74,7 +74,7 @@ pub static PAGE_REGISTRY: LazyLock<HashMap<&'static str, PageInfo>> = LazyLock::
             title: "CrackStation - Legal and Privacy",
             description: "CrackStation.net's privacy policy",
             keywords: "hash cracking legal, penetration testing, password security",
-            legacy_hit_count_id: "pages/legal-privacy.php",
+            legacy_hit_count_id: "legal-privacy",
         },
         // The 404 page carries no metadata of its own, so it renders the site
         // defaults. PHP does the same, though by accident: ProcessURL() returns
@@ -87,7 +87,7 @@ pub static PAGE_REGISTRY: LazyLock<HashMap<&'static str, PageInfo>> = LazyLock::
             title: "",
             description: "",
             keywords: "",
-            legacy_hit_count_id: "pages/404.php",
+            legacy_hit_count_id: "404",
         },
     ];
 
