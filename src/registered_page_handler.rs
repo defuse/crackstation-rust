@@ -33,7 +33,7 @@ pub async fn handle(State(state): State<AppState>, request: Request<Body>) -> Re
         .expect("BUG: ConnectInfo not available - is into_make_service_with_connect_info set up?")
         .0
         .ip();
-    let client_ip = client_ip(connection_ip, request.headers());
+    let client_ip = client_ip(connection_ip, request.headers()).to_string();
 
     let dnt_enabled = request
         .headers()
@@ -192,7 +192,7 @@ pub async fn handle_unsupported_method(
         // The Redirect arm is unreachable: UrlCanonicalizationLayer redirects aliases for
         // every method, verified with `PUT /index.htm` answering 301.
         PathLookupResult::Redirect { .. } | PathLookupResult::NotFound => {
-            let client_ip = client_ip(connection_addr.ip(), &headers);
+            let client_ip = client_ip(connection_addr.ip(), &headers).to_string();
             let dnt_enabled = headers
                 .get(header::DNT)
                 .and_then(|v| v.to_str().ok())
