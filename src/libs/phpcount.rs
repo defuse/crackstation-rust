@@ -27,7 +27,7 @@
 //! Uses cshits/csnodupes tables (CrackStation-specific table names).
 
 use hmac::{Hmac, Mac};
-use rand::RngCore;
+use rand::TryRng;
 use sha2::Sha256;
 use sqlx::MySqlPool;
 use std::sync::{Arc, RwLock};
@@ -58,7 +58,7 @@ impl VisitorKey {
         // Fails only if the OS entropy source is unavailable, which is not a condition
         // to paper over -- a predictable key would silently restore the reversibility
         // this whole mechanism exists to remove.
-        rand::rngs::OsRng
+        rand::rngs::SysRng
             .try_fill_bytes(&mut key)
             .expect("OS entropy source must be available to key the visitor counter");
         Self {
