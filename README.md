@@ -21,9 +21,9 @@ nothing but this repo.
 Building the dev hash indexes still uses the `preimage` CLI from a sibling checkout,
 so clone the two side by side:
 
-```
-git clone <crackstation-rust-repo-url>
-git clone <preimage-repo-url>
+```bash
+git clone https://github.com/defuse/crackstation-rust
+git clone https://github.com/defuse/preimage
 cd crackstation-rust
 ```
 
