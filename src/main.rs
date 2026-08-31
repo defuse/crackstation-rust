@@ -24,7 +24,6 @@ mod handler;
 mod libs;
 mod middleware;
 mod pages;
-mod prelude;
 mod registered_page_handler;
 mod registry;
 
