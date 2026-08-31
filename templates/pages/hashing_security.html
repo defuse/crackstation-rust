@@ -27,11 +27,12 @@ password hashing code, <strong>please don't!</strong>. It's too easy to screw
 up. No, that cryptography course you took in university doesn't make you exempt
 from this warning. This applies to everyone: <strong>DO NOT WRITE YOUR OWN
 CRYPTO!</strong> The problem of storing passwords has already been solved. Use
-either use either <a href="http://www.openwall.com/phpass/">phpass</a>, the PHP,
-C#, Java, and Ruby implementations in <a
-href="https://github.com/defuse/password-hashing">defuse/password-hashing</a>,
-or <a
-href="https://download.libsodium.org/doc/password_hashing/index.html">libsodium</a>.
+<strong>Argon2id</strong> through your platform's standard library or a
+maintained binding &mdash; PHP's <span class="ic">password_hash()</span>, <a
+href="https://doc.libsodium.org/password_hashing">libsodium</a>, or the <a
+href="https://github.com/P-H-C/phc-winner-argon2">reference implementation</a>.
+If Argon2 is not available to you, <strong>bcrypt</strong> or
+<strong>scrypt</strong> through a maintained library is a good second choice.
 </div>
 
 <p>
@@ -184,9 +185,9 @@ hashing the password does not meet our needs for security.
     <h3>Lookup Tables</h3>
     <center>
     <div class="passcrack" style="text-align: center;" title="Cracking many hashes with a pre-computed lookup table">
-        <span style="color: green;">Searching: 5f4dcc3b5aa765d61d8327deb882cf99: FOUND: password5</span><br />
+        <span style="color: green;">Searching: db0edd04aaac4506f7edab03ac855d56: FOUND: password5</span><br />
         Searching: 6cbe615c106f422d23669b610b564800: &nbsp;not in database<br />
-        <span style="color: green;">Searching: 630bf032efe4507f2c57b280995925a9: FOUND: letMEin12 </span><br />
+        <span style="color: green;">Searching: a91d6b72654bd32efe12761a129833ff: FOUND: letMEin12 </span><br />
         <span style="color: green;">Searching: 386f43fab5d096a7a66d67c8f213e5ec: FOUND: mcd0nalds</span><br />
         <span style="color: green;">Searching: d5ec75d5fe70d428685510fae36492d9: FOUND: p@ssw0rd!</span><br />
     </span>
@@ -249,7 +250,7 @@ hashing the password does not meet our needs for security.
     tables smaller. Because they are smaller, the solutions to more hashes can
     be stored in the same amount of space, making them more effective. Rainbow
     tables that can crack any md5 hash of a password up to 8 characters long <a
-    href="http://www.freerainbowtables.com/en/tables2/">exist</a>.
+    href="https://en.wikipedia.org/wiki/Rainbow_table">exist</a>.
     </p>
 </li>
 </ul>
@@ -465,14 +466,14 @@ that exist for some popular programming platforms.
 
 <table id="rnglist">
     <tr><th>Platform</th><th>CSPRNG</th></tr>
-    <tr><td>PHP</td><td><a href="http://php.net/manual/en/function.mcrypt-create-iv.php">mcrypt_create_iv</a>, <a href="http://php.net/manual/en/function.openssl-random-pseudo-bytes.php">openssl_random_pseudo_bytes</a></td></tr>
-    <tr><td>Java</td><td><a href="http://docs.oracle.com/javase/6/docs/api/java/security/SecureRandom.html">java.security.SecureRandom</a></td></tr>
-    <tr><td>Dot NET (C#, VB)</td><td><a href="http://msdn.microsoft.com/en-us/library/system.security.cryptography.rngcryptoserviceprovider.aspx">System.Security.Cryptography.RNGCryptoServiceProvider</a></td></tr>
-    <tr><td>Ruby</td><td><a href="http://rubydoc.info/stdlib/securerandom/1.9.3/SecureRandom">SecureRandom</a></td></tr>
+    <tr><td>PHP</td><td><a href="https://www.php.net/manual/en/function.random-bytes.php">random_bytes</a></td></tr>
+    <tr><td>Java</td><td><a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/security/SecureRandom.html">java.security.SecureRandom</a></td></tr>
+    <tr><td>Dot NET (C#, VB)</td><td><a href="https://learn.microsoft.com/en-us/dotnet/api/system.security.cryptography.randomnumbergenerator">System.Security.Cryptography.RandomNumberGenerator</a></td></tr>
+    <tr><td>Ruby</td><td><a href="https://docs.ruby-lang.org/en/master/SecureRandom.html">SecureRandom</a></td></tr>
     <tr><td>Python</td><td><a href="https://docs.python.org/3/library/secrets.html">secrets</a></td></tr>
-    <tr><td>Perl</td><td><a href="http://search.cpan.org/~mkanat/Math-Random-Secure-0.06/lib/Math/Random/Secure.pm">Math::Random::Secure</a></td></tr>
-    <tr><td>C/C++ (Windows API)</td><td><a href="http://en.wikipedia.org/wiki/CryptGenRandom">CryptGenRandom</a></td></tr>
-    <tr><td>Any language on GNU/Linux or Unix</td><td>Read from <a href="http://en.wikipedia.org/wiki//dev/random">/dev/random</a> or /dev/urandom</td></tr>
+    <tr><td>Perl</td><td><a href="https://metacpan.org/pod/Math::Random::Secure">Math::Random::Secure</a></td></tr>
+    <tr><td>C/C++ (Windows API)</td><td><a href="https://en.wikipedia.org/wiki/CryptGenRandom">CryptGenRandom</a></td></tr>
+    <tr><td>Any language on GNU/Linux or Unix</td><td>Read from <a href="https://en.wikipedia.org/wiki//dev/random">/dev/random</a> or /dev/urandom</td></tr>
 </table> 
 
 <p> The salt needs to be unique per-user per-password. Every time a user creates an account or
@@ -485,15 +486,24 @@ account table alongside the hash.  </p>
 
 <ol>
     <li>Generate a long random salt using a CSPRNG.</li>
-    <li>Prepend the salt to the password and hash it with a <b>standard</b> password hashing function like Argon2, bcrypt, scrypt, or PBKDF2.</li>
-    <li>Save both the salt and the hash in the user's database record.</li>
+    <li>Give the password and the salt to a <b>standard</b> password hashing
+    function &mdash; Argon2id, bcrypt, scrypt, or PBKDF2. These take the salt as
+    a separate argument and combine it with the password internally.
+    <b>Do not concatenate the salt onto the password yourself.</b> bcrypt in
+    particular ignores everything past the first 72 bytes of its input, so a
+    salt glued to the front can push the password itself out of what actually
+    gets hashed.</li>
+    <li>Save both the salt and the hash in the user's database record. Most
+    modern implementations return a single string that already contains the
+    salt, the cost parameters and the hash; store that string as-is.</li>
 </ol>
 
 <h4>To Validate a Password</h4>
 
 <ol>
     <li>Retrieve the user's salt and hash from the database.</li>
-    <li>Prepend the salt to the given password and hash it using the same hash function.</li>
+    <li>Give the offered password and that salt to the same hash function, with
+    the same parameters.</li>
     <li>Compare the hash of the given password with the hash from the database. If they match, the password is correct. Otherwise, the password is incorrect.</li>
 </ol>
 
@@ -586,7 +596,7 @@ certainly a good idea, but consider the following points for your implementation
     function. Don't try to invent your own&ndash;simply iteratively hashing the
     hash of the password isn't enough as it can be parallelized in hardware and
     executed as fast as a normal hash. Use a standard algorithm like <a
-    href="http://en.wikipedia.org/wiki/PBKDF2">PBKDF2</a> or <a href="http://en.wikipedia.org/wiki/Bcrypt">bcrypt</a>.
+    href="https://en.wikipedia.org/wiki/PBKDF2">PBKDF2</a> or <a href="https://en.wikipedia.org/wiki/Bcrypt">bcrypt</a>.
     You can find a PHP implementation of <a href="https://defuse.ca/php-pbkdf2.htm">PBKDF2 here</a>.
 </p>
 
@@ -603,25 +613,37 @@ certainly a good idea, but consider the following points for your implementation
     If you use a key stretching hash in a web application, be aware that you
     will need extra computational resources to process large volumes of
     authentication requests, and that key stretching may make it easier to run a
-    Denial of Service (DoS) attack on your website.  I still recommend using key
-    stretching, but with a lower iteration count. You should calculate the
-    iteration count based on your computational resources and the expected
-    maximum authentication request rate. The denial of service threat can be
-    eliminated by making the user solve a CAPTCHA every time they log in.
-    Always design your system so that the iteration count can be increased or
-    decreased in the future.
+    Denial of Service (DoS) attack on your website. Use key stretching anyway,
+    and start from a concrete cost rather than guessing:
+</p>
+
+<ul>
+    <li><b>Argon2id</b> &mdash; at least 19 MiB of memory, 2 iterations, and 1
+    degree of parallelism.</li>
+    <li><b>bcrypt</b> &mdash; a cost factor of 10 or more.</li>
+    <li><b>scrypt</b> &mdash; at least N=2^17, r=8, p=1.</li>
+    <li><b>PBKDF2-HMAC-SHA256</b> &mdash; at least 600,000 iterations.</li>
+</ul>
+
+<p>
+    Those are floors, not targets. Measure on your own hardware and raise them
+    until a single hash takes as long as you can afford &mdash; a few hundred
+    milliseconds is typical for a login form. The denial of service threat can
+    be reduced by rate limiting authentication attempts per account and per
+    source address. Always design your system so that the cost parameters can be
+    increased later, and so that stored hashes record the parameters they were
+    made with.
 </p>
 
 <p>
-    If you are worried about the computational burden, but still want to use key
-    stretching in a web application, consider running the key stretching
-    algorithm in the user's browser with JavaScript.  The <a href="http://crypto.stanford.edu/sjcl/">Stanford JavaScript Crypto
-    Library</a> includes PBKDF2. The iteration count should be set low enough
-    that the system is usable with slower clients like mobile devices, and the
-    system should fall back to server-side computation if the user's browser
-    doesn't support JavaScript. Client-side key stretching does not remove the
-    need for server-side hashing. You must hash the hash generated by the client
-    the same way you would hash a normal password.
+    Do not move the key stretching into the user's browser to save server time.
+    The browser has no secret to salt with &mdash; the only value it reliably
+    knows is the username, and a username is public, guessable, and shared
+    across sites, which is exactly the salt this article tells you not to use.
+    Whatever the client computes also becomes, in effect, the password: anyone
+    who captures it can replay it without ever knowing the real one. If you
+    cannot afford the cost on your own servers, lower it deliberately and rate
+    limit, rather than moving the work somewhere you cannot trust the inputs.
 </p>
 
 <h3>Impossible-to-crack Hashes: Keyed Hashes and Password Hashing Hardware</h3>
@@ -633,7 +655,7 @@ certainly a good idea, but consider the following points for your implementation
     who knows the key can use the hash to validate a password. This can be
     accomplished two ways. Either the hash can be encrypted using a cipher like
     AES, or the secret key can be included in the hash using a keyed hash
-    algorithm like <a href="http://en.wikipedia.org/wiki/HMAC">HMAC</a>.
+    algorithm like <a href="https://en.wikipedia.org/wiki/HMAC">HMAC</a>.
 </p>
 
 <p>
@@ -655,7 +677,7 @@ certainly a good idea, but consider the following points for your implementation
     If you can't afford multiple dedicated servers or special hardware devices,
     you can still get some of the benefits of keyed hashes on a standard web
     server. Most databases are breached using <a
-    href="http://en.wikipedia.org/wiki/SQL_injection">SQL Injection Attacks</a>,
+    href="https://en.wikipedia.org/wiki/SQL_injection">SQL Injection Attacks</a>,
     which, in most cases, don't give attackers access to the local filesystem
     (disable local filesystem access in your SQL server if it has this feature).
     If you generate a random key and store it in a file  that isn't accessible
@@ -688,9 +710,9 @@ place.
 <p>
 Even experienced developers must be educated in security in order to write secure applications.
 A great resource for learning about web application vulnerabilities is 
-<a href="https://www.owasp.org/index.php/Main_Page">The Open Web Application
+<a href="https://owasp.org/">The Open Web Application
 Security Project (OWASP)</a>. A good introduction is the 
-<a href="https://www.owasp.org/images/7/72/OWASP_Top_10-2017_%28en%29.pdf.pdf">OWASP Top Ten Vulnerability List</a>.
+<a href="https://owasp.org/www-project-top-ten/">OWASP Top Ten Vulnerability List</a>.
 Unless you understand all the vulnerabilities on the list, do not attempt to
 write a web application that deals with sensitive data. It is the employer's
 responsibility to ensure all developers are adequately trained in secure
@@ -720,11 +742,19 @@ that breaches are detected and responded to promptly.
 <span style="color: green;"><b>DO</b></span> use:
 
 <ul class="moveul">
-    <li>Well-designed key stretching algorithms such as <a href="http://en.wikipedia.org/wiki/PBKDF2">PBKDF2</a>, <a href="http://en.wikipedia.org/wiki/Bcrypt">bcrypt</a>, and <a href="http://www.tarsnap.com/scrypt.html">scrypt</a>.</li>
-    <li>OpenWall's <a href="http://www.openwall.com/phpass/">Portable PHP password hashing
-    framework</a></li>
-    <li><a href="https://github.com/defuse/password-hashing">My implementations of PBKDF2 in PHP, C#, Java, and Ruby.</a></li>
-    <li>Secure versions of <a href="http://en.wikipedia.org/wiki/Crypt_(Unix)#Library_Function_crypt.283.29">crypt</a> ($2y$, $5$, $6$)</li>
+    <li><a href="https://en.wikipedia.org/wiki/Argon2">Argon2id</a> &mdash; the
+    winner of the Password Hashing Competition, specified in
+    <a href="https://www.rfc-editor.org/rfc/rfc9106.html">RFC 9106</a>, and the
+    first choice today.</li>
+    <li><a href="https://en.wikipedia.org/wiki/Bcrypt">bcrypt</a> or
+    <a href="https://www.tarsnap.com/scrypt.html">scrypt</a>, where Argon2 is not
+    available.</li>
+    <li><a href="https://en.wikipedia.org/wiki/PBKDF2">PBKDF2</a>, where a
+    standards requirement calls for it specifically.</li>
+    <li>Whatever your platform provides on top of these &mdash; PHP's
+    <span class="ic">password_hash()</span>,
+    <a href="https://doc.libsodium.org/password_hashing">libsodium</a>, or
+    secure versions of <a href="https://en.wikipedia.org/wiki/Crypt_(Unix)#Library_Function_crypt.283.29">crypt</a> ($2y$, $5$, $6$).</li>
 </ul>
 <br />
 <span style="color: red;"><b>DO NOT</b></span> use:
@@ -833,19 +863,30 @@ credit card.
 
 <h3>What should my password policy be? Should I enforce strong passwords?</h3>
 <p>
-If your service doesn't have strict security requirements, then don't limit your
-users. I recommend showing users information about the strength of their
-password as they type it, letting them decide how secure they want their
-password to be. If you have special security needs, enforce a minimum length of
-12 characters and require at least two letters, two digits, and two symbols.
+Enforce a minimum length &mdash; 12 characters is a reasonable floor &mdash; and
+check the offered password against a list of passwords already known to be
+breached, rejecting matches. Those two rules do nearly all of the useful work.
+Show users the strength of their password as they type, and let them paste into
+the field so password managers work.
 </p>
 <p>
-Do not force your users to change their password more often than once every six
-months, as doing so creates "user fatigue" and makes users less likely to choose
-good passwords. Instead, train users to change their password whenever they feel
-it has been compromised, and to never tell their password to anyone. If it is a
-business setting, encourage employees to use paid time to memorize and practice
-their password.
+<b>Do not impose composition rules.</b> Requiring "two letters, two digits and
+two symbols" does not produce strong passwords; it produces
+<span class="ic">Password1!</span> and its neighbours, because users satisfy the
+rule in the cheapest way available. The predictability that adds is worth more
+to an attacker than the character classes take away. Do not cap the length or
+restrict which characters are allowed either.
+</p>
+<p>
+<b>Do not expire passwords on a schedule.</b> Routine expiry creates user
+fatigue and pushes people towards predictable increments of the password they
+already had. Require a change when you have evidence of compromise, and not
+otherwise. Train users to change their password whenever they suspect it has
+been exposed, and never to share it.
+</p>
+<p>
+This advice follows NIST SP 800-63B, which explicitly recommends against both
+composition rules and periodic expiry.
 </p>
 
 <h3>If an attacker has access to my database, can't they just replace the hash of my password with their own hash and login?</h3>
@@ -869,7 +910,7 @@ should only be able to read.
 <h3>Why do I have to use a special algorithm like HMAC? Why can't I just append
 the password to the secret key?</h3>
 
-<p> Hash functions like MD5, SHA1, and SHA2 use the <a href="http://en.wikipedia.org/wiki/Merkle%E2%80%93Damg%C3%A5rd_construction">
+<p> Hash functions like MD5, SHA1, and SHA2 use the <a href="https://en.wikipedia.org/wiki/Merkle%E2%80%93Damg%C3%A5rd_construction">
 Merkle–Damgård construction</a>, which makes them vulnerable to what are known
 as length extension attacks. This means that given a hash H(X), an attacker can
 find the value of H(pad(X) + Y), for any other string Y, without knowing X.
@@ -1009,11 +1050,11 @@ assembly:
 MOV EAX, [A]<br />
 CMP [B], EAX<br />
 JZ equal<br />
+AND [VALID], 0<br />
 JMP done<br />
 equal:<br />
 AND [VALID], 1<br />
 done:<br />
-AND [VALID], 0<br />
 </div>
 
 <p>
