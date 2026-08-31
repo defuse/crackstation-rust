@@ -57,6 +57,29 @@ impl CrackMatch {
     }
 }
 
+/// How a recovered plaintext is shown.
+///
+/// The wordlist is raw bytes, and production's contains entries that are not valid
+/// UTF-8 because it is assembled from breach dumps. Rendering those with
+/// `from_utf8_lossy` alone replaced each invalid byte with U+FFFD and then presented the
+/// result on a green "exact match" row -- telling the reader that a string which does
+/// *not* hash to what they submitted is the answer, with nothing on the page to indicate
+/// a substitution had happened.
+///
+/// Valid UTF-8 is shown as itself. Anything else is shown as the exact bytes in hex,
+/// which is the real answer and can be copied, followed by the lossy rendering in
+/// parentheses so the shape of the word stays readable.
+fn display_plaintext(bytes: &[u8]) -> String {
+    match std::str::from_utf8(bytes) {
+        Ok(text) => text.to_string(),
+        Err(_) => format!(
+            "Binary data: {} ({})",
+            hex::encode(bytes),
+            String::from_utf8_lossy(bytes)
+        ),
+    }
+}
+
 /// A single match found for a hash.
 pub struct CrackMatch {
     pub plaintext: String,
@@ -236,7 +259,7 @@ pub fn crack_hashes(oracle: &PreimageOracle, hashes: &[String]) -> Vec<CrackResu
                     .map(|m| {
                         let lm = &m.lookup_match;
                         CrackMatch {
-                            plaintext: lm.plaintext_lossy().into_owned(),
+                            plaintext: display_plaintext(lm.plaintext()),
                             algorithm_name: lm.algorithm().name().to_string(),
                             near_miss: if lm.is_full() {
                                 None
@@ -360,6 +383,54 @@ mod tests {
             "the exact match must be kept, and shown first"
         );
         assert_eq!(result.matches[0].plaintext, answer);
+    }
+
+    /// Ordinary passwords are untouched -- the escape hatch must not fire on text.
+    #[test]
+    fn valid_utf8_is_shown_as_itself() {
+        assert_eq!(display_plaintext(b"password"), "password");
+        assert_eq!(
+            display_plaintext("p\u{e4}ssword".as_bytes()),
+            "p\u{e4}ssword"
+        );
+        assert_eq!(display_plaintext("\u{1f512}".as_bytes()), "\u{1f512}");
+        assert_eq!(display_plaintext(b""), "");
+    }
+
+    /// The word the dev wordlist carries for exactly this path. The hex is the real
+    /// answer; the parenthesised form is what the old code showed on its own, as though
+    /// it were the password.
+    #[test]
+    fn invalid_utf8_is_shown_as_hex_and_a_lossy_rendering() {
+        assert_eq!(
+            display_plaintext(b"inv\xff\xfeword"),
+            "Binary data: 696e76fffe776f7264 (inv\u{fffd}\u{fffd}word)"
+        );
+    }
+
+    /// A password that is nothing but invalid bytes still has to render something.
+    #[test]
+    fn wholly_invalid_bytes_still_produce_both_halves() {
+        assert_eq!(
+            display_plaintext(&[0xff, 0xfe]),
+            "Binary data: fffe (\u{fffd}\u{fffd})"
+        );
+    }
+
+    /// The hex must be the exact bytes, or the "real answer" claim is false. Checked by
+    /// decoding it back rather than by comparing to another literal.
+    #[test]
+    fn the_hex_round_trips_to_the_original_bytes() {
+        let original: &[u8] = b"caf\xe9 au lait";
+        let shown = display_plaintext(original);
+
+        let hex_part = shown
+            .strip_prefix("Binary data: ")
+            .and_then(|rest| rest.split_once(' '))
+            .map(|(hex, _)| hex)
+            .expect("the rendering must start with the hex");
+
+        assert_eq!(hex::decode(hex_part).expect("valid hex"), original);
     }
 
     /// The split point is where the two digests stop agreeing, which for a query
