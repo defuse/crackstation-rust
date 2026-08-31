@@ -14,6 +14,7 @@ use tower::{
     limit::GlobalConcurrencyLimitLayer, load_shed::LoadShedLayer, ServiceBuilder,
 };
 use tower_http::{catch_panic::CatchPanicLayer, services::ServeDir};
+use tokio::signal::unix::{signal, SignalKind};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 mod app_state;
@@ -316,14 +317,37 @@ async fn async_main() {
         listener,
         app.into_make_service_with_connect_info::<std::net::SocketAddr>(),
     )
-    .with_graceful_shutdown(async {
-        tokio::signal::ctrl_c().await.expect("failed to listen for Ctrl+C");
-        eprintln!("Shutting down gracefully (Ctrl+C again to force quit)...");
-        // Reset SIGINT to default OS behavior so the next Ctrl+C kills immediately
-        unsafe { libc::signal(libc::SIGINT, libc::SIG_DFL); }
-    })
+    .with_graceful_shutdown(shutdown_signal())
     .await
     .expect("server error");
+}
+
+/// Resolve when the process is asked to stop, by either signal that means it.
+///
+/// SIGTERM is the one that matters in production: `docker stop`, systemd, and every
+/// orchestrator send it, and waiting only on SIGINT meant none of them ever reached the
+/// graceful path -- the container ran to the end of its grace period and was SIGKILLed,
+/// dropping in-flight requests on every single deploy. SIGINT is what a developer sends
+/// with Ctrl+C.
+///
+/// After the first signal, SIGINT is restored to its default action so a second Ctrl+C
+/// kills immediately rather than waiting behind a slow request. SIGTERM is left alone:
+/// an orchestrator that wants to escalate sends SIGKILL, which cannot be trapped anyway.
+async fn shutdown_signal() {
+    let mut sigterm = signal(SignalKind::terminate()).expect("failed to listen for SIGTERM");
+
+    let reason = tokio::select! {
+        _ = tokio::signal::ctrl_c() => "SIGINT",
+        _ = sigterm.recv() => "SIGTERM",
+    };
+
+    eprintln!("Received {reason}, shutting down gracefully (Ctrl+C again to force quit)...");
+
+    // SAFETY: `signal(2)` with SIG_DFL is async-signal-safe and this only restores the
+    // default disposition; no handler state is shared with the runtime.
+    unsafe {
+        libc::signal(libc::SIGINT, libc::SIG_DFL);
+    }
 }
 
 #[cfg(test)]
