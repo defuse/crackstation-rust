@@ -312,6 +312,25 @@ async fn async_main() {
 
     let listener = tokio::net::TcpListener::bind(&listen_addr).await
         .expect("failed to bind listener");
+    // No header-read timeout is installed here, deliberately.
+    //
+    // hyper 1.x has a 30-second default for it, but only arms that default when the
+    // application supplies a `Timer`. `axum::serve` builds its connection handler
+    // internally and offers no way to set one, so hyper drops the default and logs a
+    // warning. Installing a timer means abandoning `axum::serve` for a hand-rolled
+    // accept loop over `hyper_util::server::conn::auto::Builder`, re-implementing
+    // `ConnectInfo` wiring and graceful shutdown along the way.
+    //
+    // DEPLOYMENT CONTRACT: the bound is enforced by Caddy instead, which sets
+    // `read_header 30s` in the global `servers` block of
+    // `operations/containers/crackstation-rust/config/Caddyfile` -- the same 30 seconds hyper
+    // would have applied. A slow-header client talks to Caddy and is cut off there; this
+    // process only ever accepts loopback connections from Caddy, which sends complete
+    // headers.
+    //
+    // Removing that Caddy setting, or exposing this listener directly, re-opens a
+    // slowloris with nothing to stop it: the concurrency limit does not help, because it
+    // applies after the headers are read.
     axum::serve(
         listener,
         app.into_make_service_with_connect_info::<std::net::SocketAddr>(),
