@@ -333,7 +333,47 @@ impl PhpCountService {
         Ok(())
     }
 
-    /// Remove old entries from csnodupes table
+    /// Remove old entries from the csnodupes table.
+    ///
+    /// # If the site is mysteriously slow, start here
+    ///
+    /// This runs on **every counted page view**, and it is a full table scan holding a
+    /// **table-level write lock** -- so the cost is not per-page, it serialises the whole
+    /// site. `csnodupes` is MyISAM with `PRIMARY KEY (ids_hash)` and **no index on
+    /// `time`**, which is the only column this filters on.
+    ///
+    /// The cost tracks how many rows the table has *ever* held, not how many it holds
+    /// now. MyISAM flags a deleted row and links its slot onto a free list; the data
+    /// file never shrinks, and a scan walks slots by offset, holes included. So a one-off
+    /// flood makes every later request slower, permanently, with nothing in
+    /// `SELECT COUNT(*)` to show for it -- which is exactly what makes this hard to
+    /// diagnose from the application side.
+    ///
+    /// Measured on a dev table: 41 live rows swept in 0.1 ms; after inserting and then
+    /// deleting 200k rows, sweeping the *same 41 live rows* took 3.7 ms, a 37x
+    /// regression, with `Data_free` at 14.6 MB. `OPTIMIZE TABLE` returned it to 0.2 ms.
+    ///
+    /// Confirm it:
+    ///
+    /// ```sql
+    /// SHOW TABLE STATUS LIKE 'csnodupes';            -- Data_free large while Rows is small
+    /// EXPLAIN DELETE FROM csnodupes WHERE time < 1;  -- type=ALL means full scan
+    /// ```
+    ///
+    /// Fix it, in ascending order of effort and effect:
+    ///
+    /// ```sql
+    /// OPTIMIZE TABLE csnodupes;              -- reclaims the holes; one-off, fixes the symptom
+    /// ALTER TABLE csnodupes ADD KEY (time);  -- makes the sweep an index range scan
+    /// ALTER TABLE csnodupes ENGINE=InnoDB;   -- removes the site-wide write lock
+    /// ```
+    ///
+    /// Accepted rather than fixed (2026-08-31), because filling the table needs many
+    /// distinct client addresses and `client_ip` now returns the one the proxy vouched
+    /// for rather than one the requester chose -- so a client gets one row per page, not
+    /// unlimited. The remaining way in is an IPv6 client with a /64, whose addresses are
+    /// all legitimately distinct; keying the counter on the /64 would close that. See
+    /// `hit-counter-db-work-on-every-request-enables-cheap-dos.md` in the audit.
     async fn cleanup(&self) -> Result<(), sqlx::Error> {
         let cutoff = Self::now() - HIT_OLD_AFTER_SECONDS;
 
