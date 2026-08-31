@@ -67,7 +67,7 @@ pub async fn handle(State(state): State<AppState>, request: Request<Body>) -> Re
         .headers()
         .get("X-Captcha-Bypass")
         .and_then(|v| v.to_str().ok())
-        .map(|s| s.to_string());
+        .map(|s| crate::context::BypassSecret::new(s.to_string()));
 
     // Look up the registered page.
     let page_info = match resolve_path(&path) {

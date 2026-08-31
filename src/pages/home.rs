@@ -139,7 +139,7 @@ fn is_captcha_bypassed(ctx: &PageContext) -> bool {
         None => return false,
     };
 
-    let received_hash = hex::encode(Sha256::digest(bypass_header.as_bytes()));
+    let received_hash = hex::encode(Sha256::digest(bypass_header.expose().as_bytes()));
     received_hash.as_bytes().ct_eq(CAPTCHA_BYPASS_KEY_HASH.as_bytes()).into()
 }
 
