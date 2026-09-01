@@ -8,7 +8,14 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 CRACKING_DIR="$SCRIPT_DIR/cracking"
-PREIMAGE="cargo run --manifest-path=$PROJECT_DIR/../preimage/preimage/Cargo.toml --"
+# A function, not a string: an unquoted "$PREIMAGE" relied on word splitting to become
+# separate arguments, which meant any space anywhere in the path -- a checkout under
+# "My Documents", a CI workspace with a space -- split the manifest path into two broken
+# arguments and failed the build with a confusing error. "$@" keeps the caller's
+# arguments intact and the quoted path survives spaces.
+preimage() {
+    cargo run --manifest-path="$PROJECT_DIR/../preimage/preimage/Cargo.toml" -- "$@"
+}
 
 echo "=== Setting up test cracking data ==="
 echo "Output directory: $CRACKING_DIR"
@@ -159,11 +166,11 @@ declare -A ALGO_MAP=(
 for ALG in "${!ALGO_MAP[@]}"; do
     IDX="$CRACKING_DIR/${ALGO_MAP[$ALG]}"
     echo "Building $ALG index..."
-    $PREIMAGE create --algorithm "$ALG" --wordlist "$WORDLIST" --output "$IDX"
+    preimage create --algorithm "$ALG" --wordlist "$WORDLIST" --output "$IDX"
     echo "Sorting $ALG index..."
-    $PREIMAGE sort --ram "$IDX"
+    preimage sort --ram "$IDX"
     echo "Verifying $ALG index..."
-    $PREIMAGE check "$IDX"
+    preimage check "$IDX"
 done
 
 # Build md5-huge and sha1-huge indexes from HUGELIST.lst.
@@ -173,11 +180,11 @@ for ALG_HUGE in "md5:md5-huge.idx" "sha1:sha1-huge.idx"; do
     IDX_NAME="${ALG_HUGE##*:}"
     IDX="$CRACKING_DIR/$IDX_NAME"
     echo "Building $IDX_NAME index (huge, from HUGELIST)..."
-    $PREIMAGE create --algorithm "$ALG" --wordlist "$HUGELIST" --output "$IDX"
+    preimage create --algorithm "$ALG" --wordlist "$HUGELIST" --output "$IDX"
     echo "Sorting $IDX_NAME index..."
-    $PREIMAGE sort --ram "$IDX"
+    preimage sort --ram "$IDX"
     echo "Verifying $IDX_NAME index..."
-    $PREIMAGE check "$IDX"
+    preimage check "$IDX"
 done
 
 echo ""
