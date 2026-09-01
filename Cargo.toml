@@ -68,14 +68,3 @@ tempfile = "3"
 # are debugging rather than in the deployed artifact.
 [profile.release]
 overflow-checks = true
-
-# TEMPORARY -- DELETE THE MOMENT preimage 0.1.2 IS PUBLISHED.
-#
-# The per-hash match limit (PreimageOracle::crack_with_limit) does not exist in the
-# published 0.1.1, so this builds against the sibling checkout until then. A production
-# build will fail outright with this here, because /storage holds no ../preimage -- that
-# is deliberate. A loud failure at build time is the right outcome for "the crate this
-# depends on has not been released yet"; the alternative is shipping a server built from
-# whatever happens to be next to it.
-[patch.crates-io]
-preimage = { path = "../preimage/preimage" }
