@@ -233,7 +233,7 @@ ul {
 }
 
 #footerborder {
-    background-image: url('images/undergrad-inverted.png');
+    background-image: url('/images/undergrad-inverted.png');
     height: 10px;
 }
 
