@@ -144,6 +144,18 @@ impl PhpCountService {
         // Ensure page has counter entries
         self.create_counts_if_not_present(page_id).await?;
 
+        // Known race, carried over from the PHP original and shared with defuse-rust:
+        // two concurrent requests from the same IP both see "unique" before either one
+        // calls log_hit(), so both increment the unique counter while log_hit's
+        // ON DUPLICATE KEY UPDATE collapses them into a single dedupe row. "Unique Hits"
+        // therefore counts concurrent requests rather than distinct visitors, and can be
+        // driven up from one address.
+        //
+        // Not fixed, deliberately. Closing it needs a transaction, and both tables are
+        // MyISAM to match the live schema -- also deliberate, since converting them is a
+        // migration on a table holding years of production counts, for a decorative hit
+        // counter. The same non-atomicity means a failure part way through this sequence
+        // leaves the counters inconsistent with no rollback available.
         if self.is_unique_hit(page_id, client_ip).await? {
             self.count_hit(page_id, true).await?;
             self.log_hit(page_id, client_ip).await?;
