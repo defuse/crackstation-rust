@@ -9,6 +9,7 @@
 use axum::{
     body::Body,
     extract::ConnectInfo,
+    http::uri::Authority,
     http::{header, Request, Response, StatusCode},
 };
 use std::net::SocketAddr;
@@ -120,7 +121,9 @@ where
                 .unwrap_or("")
                 .to_string();
 
-            let host_without_port = host.split(':').next().unwrap_or("").to_lowercase();
+            // `None` here means the header is not a valid authority at all, which the
+            // Host check below turns into a 400 rather than guessing at it.
+            let host_without_port = host_name(&host).unwrap_or_default();
 
             let connection_ip = req.extensions()
                 .get::<ConnectInfo<SocketAddr>>()
@@ -166,6 +169,29 @@ where
             inner.call(req).await
         })
     }
+}
+
+/// The host name from a `Host` header value, lowercased, or `None` if it is not a valid
+/// authority.
+///
+/// The header is `uri-host [ ":" port ]`, which is not what `split(':').next()` returns.
+/// That shortcut was wrong in three ways, and one of them was exploitable:
+///
+/// * `crackstation.net:@evil.com` split to `crackstation.net` and so matched
+///   `MASTER_HOST`, skipping the canonicalisation redirect -- while the real host is
+///   `evil.com`, because everything before `@` is userinfo. The raw header then reached
+///   the `Location` of the URL-canonicalisation redirect, giving an open redirect from
+///   this site's own origin.
+/// * `user@crackstation.net` split to `user@crackstation.net`, which matches nothing.
+/// * `[::1]:8080` split to `[`. Every IPv6 literal was mangled.
+///
+/// `Authority` is the parser for this grammar and gets all three right. It does not
+/// lowercase, so that is done here: host comparison is case-insensitive (RFC 9110), and
+/// every caller compares against a lowercase constant.
+pub(crate) fn host_name(host_header: &str) -> Option<String> {
+    Authority::try_from(host_header)
+        .ok()
+        .map(|authority| authority.host().to_lowercase())
 }
 
 /// Check if a host is in the dev hosts list (localhost, dev hosts, etc.)
@@ -214,6 +240,62 @@ fn redirect_301(url: &str) -> Response<Body> {
 
 #[cfg(test)]
 mod tests {
+    use super::host_name;
+
+    /// The gadget this parser exists to close. Everything before `@` in an authority is
+    /// userinfo, so the real host is `evil.com` -- but `split(':').next()` returned
+    /// `crackstation.net`, which matched MASTER_HOST, skipped the canonical-host redirect,
+    /// and let the raw header reach a `Location`. An open redirect from our own origin.
+    #[test]
+    fn userinfo_does_not_disguise_the_real_host() {
+        assert_eq!(host_name("crackstation.net:@evil.com").as_deref(), Some("evil.com"));
+        assert_eq!(
+            host_name("crackstation.net:8443@evil.com").as_deref(),
+            Some("evil.com")
+        );
+        assert_eq!(host_name("user@crackstation.net").as_deref(), Some("crackstation.net"));
+    }
+
+    /// `split(':')` returned `[` for every IPv6 literal.
+    #[test]
+    fn ipv6_literals_survive() {
+        assert_eq!(host_name("[::1]:8080").as_deref(), Some("[::1]"));
+        assert_eq!(host_name("[::1]").as_deref(), Some("[::1]"));
+        assert_eq!(
+            host_name("[2001:db8::1]:443").as_deref(),
+            Some("[2001:db8::1]")
+        );
+    }
+
+    /// The ordinary cases must keep working, including the port forms dev uses.
+    #[test]
+    fn plain_hosts_and_ports_are_unchanged() {
+        assert_eq!(host_name("crackstation.net").as_deref(), Some("crackstation.net"));
+        assert_eq!(
+            host_name("crackstation.net:443").as_deref(),
+            Some("crackstation.net")
+        );
+        assert_eq!(host_name("localhost:3000").as_deref(), Some("localhost"));
+    }
+
+    /// Host comparison is case-insensitive and every caller compares against a lowercase
+    /// constant, so the parser must lowercase -- `Authority` does not.
+    #[test]
+    fn the_host_is_lowercased() {
+        assert_eq!(host_name("CRACKSTATION.NET").as_deref(), Some("crackstation.net"));
+        assert_eq!(host_name("CrackStation.Net:443").as_deref(), Some("crackstation.net"));
+    }
+
+    /// An unparseable authority yields None, which callers turn into a 400 or a
+    /// non-matching host rather than a guess.
+    #[test]
+    fn an_invalid_authority_is_rejected() {
+        assert_eq!(host_name(""), None);
+        assert_eq!(host_name("not a host"), None);
+        assert_eq!(host_name("crackstation.net/path"), None);
+    }
+
+
     use super::*;
 
     #[test]
