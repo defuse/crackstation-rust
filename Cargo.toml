@@ -54,6 +54,21 @@ glob = "0.3"
 [dev-dependencies]
 tempfile = "3"
 
+# Integer overflow panics in release instead of wrapping silently. The default release
+# profile turns these off, which is the one form of silent failure this codebase would
+# otherwise ship: a wrapped index calculation surfaces as a wrong "Not found" or a wrong
+# plaintext, with nothing in the log.
+#
+# Costs nothing measurable here. The server hashes roughly twenty candidate words per
+# request to confirm matches; the bulk hashing is index building, which runs from the
+# preimage CLI built out of preimage's own workspace, where this setting does not apply.
+#
+# No `debug` here on purpose. Cargo applies only the top-level profile, so preimage's
+# `debug = true` never reached this build anyway, and debuginfo belongs in a build you
+# are debugging rather than in the deployed artifact.
+[profile.release]
+overflow-checks = true
+
 # TEMPORARY -- DELETE THE MOMENT preimage 0.1.2 IS PUBLISHED.
 #
 # The per-hash match limit (PreimageOracle::crack_with_limit) does not exist in the
