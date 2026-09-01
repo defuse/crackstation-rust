@@ -29,6 +29,21 @@ fn check_no_cache(path: &str) -> bool {
 }
 
 /// Tower layer for security headers
+/// The Content-Security-Policy sent with every response.
+///
+/// Kept as a constant so the integration tests can assert the exact string a browser
+/// receives, rather than a substring of it.
+const CONTENT_SECURITY_POLICY: &str = "default-src 'none'; \
+script-src 'self' https://www.google.com https://www.gstatic.com; \
+style-src 'self' 'unsafe-inline'; \
+img-src 'self' data: https://www.google.com https://www.gstatic.com; \
+font-src 'self'; \
+connect-src 'self' https://www.google.com; \
+frame-src https://www.google.com; \
+form-action 'self'; \
+base-uri 'none'; \
+frame-ancestors 'self'";
+
 #[derive(Clone)]
 pub struct SecurityHeadersLayer;
 
@@ -120,6 +135,35 @@ where
             headers.insert(
                 header::REFERRER_POLICY,
                 "strict-origin-when-cross-origin".parse().expect("valid header value"),
+            );
+
+            // Content-Security-Policy.
+            //
+            // The site's own inventory is small: three stylesheets under /css, images
+            // under /images, and one script, /js/home.js. Everything else linked from a
+            // page is an ordinary <a href>, which CSP does not govern.
+            //
+            // The Google entries are all reCAPTCHA. api.js is fetched from www.google.com
+            // and pulls from www.gstatic.com; it renders the widget in an iframe on
+            // www.google.com and makes its own requests back there. Those are the reason
+            // for the script-src, img-src, connect-src and frame-src entries -- get any of
+            // them wrong and the checkbox never appears, which means nobody can submit a
+            // hash at all. That is the failure mode to watch for after a change here.
+            //
+            // 'unsafe-inline' is present for styles and nowhere else. The templates carry
+            // ~49 inline style attributes and reCAPTCHA injects its own, so removing it
+            // would be a large refactor; style injection is also a much weaker primitive
+            // than script injection, which is the one this actually constrains.
+            //
+            // The inline <script> that used to be in home.html now lives in
+            // static/js/home.js precisely so script-src can stay 'self' with no
+            // 'unsafe-inline' and no hash to keep in step with the template.
+            //
+            // default-src 'none' means anything not listed -- objects, workers, manifests,
+            // fonts from elsewhere -- is refused rather than quietly allowed.
+            headers.insert(
+                header::CONTENT_SECURITY_POLICY,
+                CONTENT_SECURITY_POLICY.parse().expect("valid header value"),
             );
 
             // Sensitive pages must not be left in a shared browser's cache or in its
