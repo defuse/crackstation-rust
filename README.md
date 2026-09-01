@@ -109,8 +109,10 @@ CRACKSTATION_URL=http://localhost:3000/ cargo test --no-fail-fast
 
 ### AI Use Policy
 
-AI tools were used to assist with building this website. All code has been fully
-reviewed, and rewritten for clarity when necessary, by myself (a human). If you
-would like to submit a PR, using AI is fine, but you must stand by the
+This software was written with heavy assistance from AI tools, and **has not yet
+been reviewed by a human**. I intend to review it and will update this notice once
+I have.
+
+If you would like to submit a PR, using AI is fine, but you must stand by the
 correctness of your submission as strongly as you would if you had written the
 code yourself.
