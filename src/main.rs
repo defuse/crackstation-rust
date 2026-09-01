@@ -361,8 +361,18 @@ async fn shutdown_signal() {
 
     eprintln!("Received {reason}, shutting down gracefully (Ctrl+C again to force quit)...");
 
-    // SAFETY: `signal(2)` with SIG_DFL is async-signal-safe and this only restores the
-    // default disposition; no handler state is shared with the runtime.
+    // SAFETY: `libc::signal` is unsafe because it is an FFI call that can install a
+    // handler function, and a handler runs in a context where almost nothing is legal to
+    // call. `SIG_DFL` installs no handler: it restores SIGINT to the kernel's default
+    // action, so no Rust code is ever entered from a signal and none of that applies.
+    //
+    // (An earlier version of this comment justified it as "async-signal-safe". That
+    // property is about what may be called *inside* a handler, and nothing here is
+    // inside one -- it was citing a rule that does not govern this call.)
+    //
+    // What it does do is discard tokio's SIGINT registration, which is the intent: the
+    // shutdown is already under way, and a second Ctrl+C should kill immediately rather
+    // than queue behind a slow request.
     unsafe {
         libc::signal(libc::SIGINT, libc::SIG_DFL);
     }
