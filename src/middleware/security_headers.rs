@@ -1,7 +1,6 @@
 //! Security Headers Middleware
 //!
 //! Adds security-related HTTP headers to all responses:
-//! - Content-Type: text/html; charset=utf-8 (explicit, not relying on defaults)
 //! - X-Frame-Options: SAMEORIGIN
 //! - X-Content-Type-Options: nosniff
 //! - Referrer-Policy: strict-origin-when-cross-origin
@@ -104,20 +103,16 @@ where
             let mut response = inner.call(req).await?;
             let headers = response.headers_mut();
 
-            // Content-Type: only set for HTML pages, not static assets
-            let existing_content_type = headers.get(header::CONTENT_TYPE)
-                .and_then(|v| v.to_str().ok())
-                .unwrap_or("");
-
-            if existing_content_type.is_empty()
-                || existing_content_type == "text/html"
-                || existing_content_type.starts_with("text/html;")
-            {
-                headers.insert(
-                    header::CONTENT_TYPE,
-                    "text/html; charset=utf-8".parse().expect("valid header value"),
-                );
-            }
+            // Deliberately no Content-Type handling here. Every response that carries a
+            // body already declares its own type -- askama sets text/html; charset=utf-8,
+            // axum's (StatusCode, &str) responses set text/plain; charset=utf-8, and
+            // ServeDir sets the file's mime type. The responses that arrive here without
+            // one are the bodyless ones: 304, 412, and the 301/307 redirects. Supplying a
+            // default would land on exactly those, telling a cache that a stored
+            // text/css is now HTML, which RFC 9110 5.4.5 forbids a 304 from doing.
+            //
+            // So: do not add one back. If a response ever shows up untyped and needs a
+            // type, fix it where it is built.
 
             // X-Frame-Options: SAMEORIGIN (always)
             headers.insert(

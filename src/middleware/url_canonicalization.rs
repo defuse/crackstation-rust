@@ -11,6 +11,7 @@ use axum::{
     extract::ConnectInfo,
     http::uri::Authority,
     http::{header, Request, Response, StatusCode},
+    response::IntoResponse,
 };
 use std::net::SocketAddr;
 use std::task::{Context, Poll};
@@ -140,10 +141,10 @@ where
 
             // Reject requests with missing or empty Host header
             if host.is_empty() || host_without_port.is_empty() {
-                return Ok(Response::builder()
-                    .status(StatusCode::BAD_REQUEST)
-                    .body(Body::from("Missing Host header"))
-                    .expect("valid response"));
+                // Built through IntoResponse rather than by hand so axum labels it
+                // text/plain; charset=utf-8. A hand-built response carries no
+                // Content-Type at all, and nothing downstream adds one.
+                return Ok((StatusCode::BAD_REQUEST, "Missing Host header").into_response());
             }
 
             // Step 1: Host canonicalization
@@ -240,7 +241,57 @@ fn redirect_301(url: &str) -> Response<Body> {
 
 #[cfg(test)]
 mod tests {
-    use super::host_name;
+    use super::*;
+    use axum::body::to_bytes;
+
+    /// An inner service that would answer 200 if the middleware ever let a request
+    /// through -- so a test asserting a 400 is also asserting the request was stopped.
+    #[derive(Clone)]
+    struct AlwaysOk;
+
+    impl Service<Request<Body>> for AlwaysOk {
+        type Response = Response<Body>;
+        type Error = std::convert::Infallible;
+        type Future = std::future::Ready<Result<Response<Body>, Self::Error>>;
+
+        fn poll_ready(&mut self, _: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
+            Poll::Ready(Ok(()))
+        }
+
+        fn call(&mut self, _: Request<Body>) -> Self::Future {
+            std::future::ready(Ok(Response::new(Body::from("inner service ran"))))
+        }
+    }
+
+    /// The missing-Host rejection is the one response this middleware builds that has a
+    /// body, so it is the one that has to declare its own type. It used to be built by
+    /// hand with no Content-Type, and `SecurityHeadersLayer` then labelled its plain
+    /// text as `text/html`. Nothing supplies a default any more, so an untyped body here
+    /// would reach the client untyped.
+    #[tokio::test]
+    async fn missing_host_is_rejected_as_plain_text() {
+        let mut service = UrlCanonicalizationLayer.layer(AlwaysOk);
+        let request = Request::builder()
+            .uri("/")
+            .body(Body::empty())
+            .expect("valid request");
+
+        let response = service.call(request).await.expect("infallible");
+
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+        assert_eq!(
+            response
+                .headers()
+                .get(header::CONTENT_TYPE)
+                .expect("a body must declare its type"),
+            "text/plain; charset=utf-8"
+        );
+
+        let body = to_bytes(response.into_body(), usize::MAX)
+            .await
+            .expect("body must be readable");
+        assert_eq!(&body[..], b"Missing Host header");
+    }
 
     /// The gadget this parser exists to close. Everything before `@` in an authority is
     /// userinfo, so the real host is `evil.com` -- but `split(':').next()` returned
@@ -294,9 +345,6 @@ mod tests {
         assert_eq!(host_name("not a host"), None);
         assert_eq!(host_name("crackstation.net/path"), None);
     }
-
-
-    use super::*;
 
     #[test]
     fn test_dev_hosts() {
