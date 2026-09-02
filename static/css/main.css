@@ -192,6 +192,17 @@ table.results {
     border-collapse: collapse;
     width: auto;
     font: 13px/1.45 var(--data);
+    /* Never narrower than the summary needs on one line. The caption is part of the
+       table, so a table sized to a short hash -- cafebabecafebabe is about 250px --
+       leaves the summary wrapping into three lines above it. 720px is what six stats
+       come to at typical counts; an md5 row is about 370px, so this is comfortably
+       past the 128-bit floor. */
+    min-width: 720px;
+}
+@media (max-width: 780px) {
+    /* On a phone, forcing 720px would mean a horizontal scroll on every result. Let
+       the summary wrap there instead -- it is the cheaper of the two. */
+    table.results { min-width: 0; }
 }
 table.results th {
     background: #000;
