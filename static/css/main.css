@@ -241,7 +241,7 @@ caption.summary > div {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 12px;
+    gap: 20px;
 }
 .downloaddiv a {
     /* both links take the width of the wider, so a stack of them lines up */
