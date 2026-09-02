@@ -307,6 +307,12 @@ footer a:hover { color: #F00; }
    redesign; these are its existing styles, moved so it does not lose them. */
 .ic { color: #000; font-family: var(--data); }
 .sca { display: block; height: 100%; width: 100%; }
+/* "How Hashes are Cracked" is four h3 sections wrapped in a ul -- each item is a
+   heading and a figure, not a list item. The marker and the 40px indent push those
+   headings out of line with every other h3 on the page. The other .moveul lists are
+   ordinary prose lists and keep theirs. */
+.sectionlist { padding-left: 0; list-style: none; }
+
 .shortcuts { width: 100%; color: #000; }
 .shortcuts td {
     background-color: #F0F0F0;

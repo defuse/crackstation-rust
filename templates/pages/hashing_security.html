@@ -8,8 +8,8 @@ If you're a web developer, you've probably had to make a user account system.
 The most important aspect of a user account system is how user passwords are
 protected. User account databases are hacked frequently, so you absolutely must
 do something to protect your users' passwords if your website is ever breached.
-The best way to protect passwords is to employ <b>salted password hashing</b>.
-This page will explain why it's done the way it is.
+The best way to protect passwords is to employ <b>salted, memory-hard password
+hashing</b>.  This page will explain why it's done the way it is.
 </p>
 
 <p>
@@ -22,24 +22,29 @@ but why it should be done that way.
 
 
 <div style="background-color: #FFCCCC; border: solid red 1px; padding: 10px;">
-<strong>IMPORTANT WARNING:</strong> If you are thinking of writing your own
-password hashing code, <strong>please don't!</strong>. It's too easy to screw
-up. No, that cryptography course you took in university doesn't make you exempt
-from this warning. This applies to everyone: <strong>DO NOT WRITE YOUR OWN
-CRYPTO!</strong> The problem of storing passwords has already been solved. Use
+<center><strong>IMPORTANT WARNING:</strong></center><br />
+
+If you are thinking about writing your own
+password hashing code from scratch, <strong>please don't!</strong> Hand-made
+password hashing implementations are commonly wrong, for reasons this page
+explains.
+
+<br /> <br />
+
+The problem of storing passwords has been solved in commonly-available libraries. Use
 <strong>Argon2id</strong> through your platform's standard library or a
 maintained binding &mdash; PHP's <span class="ic">password_hash()</span>, <a
 href="https://doc.libsodium.org/password_hashing">libsodium</a>, or the <a
 href="https://github.com/P-H-C/phc-winner-argon2">reference implementation</a>.
-If Argon2 is not available to you, <strong>bcrypt</strong> or
-<strong>scrypt</strong> through a maintained library is a good second choice.
+If Argon2 is not available to you, <strong>scrypt</strong> or
+<strong>bcrypt</strong> through a maintained library is a good second choice. If those are not available, <strong>PBKDF2</strong> with a high iteration count may be used.
 </div>
 
 <p>
 If for some reason you missed that big red warning note, please go read it now.
 Really, this guide is <b>not</b> meant to walk you through the process of
-writing your own storage system, it's to explain the reasons why passwords
-should be stored a certain way.
+writing your own password hashing system from scratch, it's to explain the
+reasons <em>why</em> passwords should be stored a certain way.
 </p>
 
 <p>You may use the following links to jump to the different sections of this page.</p>
@@ -71,7 +76,7 @@ a fixed-length "fingerprint" that cannot be reversed. They also have the
 property that if the input changes by even a tiny bit, the resulting hash is
 completely different (see the example above). This is great for protecting
 passwords, because we want to store passwords in a form that protects them even
-if the password file itself is compromised, but at the same time, we need to be
+if the password database itself is compromised, but at the same time, we need to be
 able to verify that a user's password is correct.
 </p>
 
@@ -100,7 +105,8 @@ same as the hash functions you may have seen in a data structures course. The
 hash functions used to implement data structures such as hash tables are
 designed to be fast, not secure. Only <b>cryptographic hash functions</b> may be
 used to implement password hashing.  Hash functions like SHA256, SHA512, RipeMD,
-and WHIRLPOOL are cryptographic hash functions.
+and WHIRLPOOL are cryptographic hash functions. But even these cryptographic
+hashes are not suitable for password storage: a good password hashing function needs to be a little bit hard to compute, using lots of CPU and memory, to slow down attackers attempting to crack the hashes. Bare cryptographic hashes are unsuitable because they are designed to be fast to compute.
 </p>
 
 <p>
@@ -108,7 +114,7 @@ It is easy to think that all you have to do is run the password through a
 cryptographic hash function and your users' passwords will be secure. This is
 far from the truth. There are many ways to recover passwords from plain hashes
 very quickly. There are several easy-to-implement techniques that make these
-"attacks" much less effective. To motivate the need for these techniques,
+attacks much less effective. To motivate the need for these techniques,
 consider this very website. On the front page, you can submit a list of hashes
 to be cracked, and receive results in less than a second. Clearly, simply
 hashing the password does not meet our needs for security.
@@ -118,7 +124,7 @@ hashing the password does not meet our needs for security.
 
 <a name="attacks"></a>
 <h2>How Hashes are Cracked</h2>
-<ul class="moveul" >
+<ul class="sectionlist">
 <li>
     <h3>Dictionary and Brute Force Attacks</h3>
     <table style="margin: 0 auto;">
@@ -175,9 +181,10 @@ hashing the password does not meet our needs for security.
 
     <p>
     There is no way to prevent dictionary attacks or brute force attacks. They
-    can be made less effective, but there isn't a way to prevent them
-    altogether. If your password hashing system is secure, the only way to crack
-    the hashes will be to run a dictionary or brute-force attack on each hash.
+    can be made less effective by using slow, memory-hard hashing functions, but
+    there isn't a way to prevent them altogether. If your password hashing
+    system is secure, the only way to crack the hashes will be to run a
+    dictionary or brute-force attack on each hash.
     </p>
 </li>
 
