@@ -36,16 +36,8 @@ pub static PAGE_REGISTRY: LazyLock<HashMap<&'static str, PageInfo>> = LazyLock::
             keywords: "salt, salted hashing, secure password hashing, password hashing, proper way to hash passwords",
             legacy_hit_count_id: "hashing-security",
         },
-        page! {
-            handler: contact,
-            slug: "contact-us",
-            title: "CrackStation Contact",
-            description: "Instructions for contacting CrackStation",
-            keywords: "crackstation contact",
-            legacy_hit_count_id: "contact-us",
-        },
         // NOTE: PHP has title "CrackStation Contact" and keywords "crackstation contact"
-        // for this page too — appears to be a copy-paste error, but we match it exactly.
+        // for the about page too — appears to be a copy-paste error, but we match it exactly.
         page! {
             handler: about,
             slug: "about-us",

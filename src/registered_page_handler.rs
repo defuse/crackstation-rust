@@ -301,7 +301,6 @@ mod tests {
                 ("", "GET, HEAD, POST"),
                 ("404", "GET, HEAD"),
                 ("about-us", "GET, HEAD"),
-                ("contact-us", "GET, HEAD"),
                 ("crackstation-wordlist-password-cracking-dictionary", "GET, HEAD"),
                 ("hashing-security", "GET, HEAD"),
                 ("legal-privacy", "GET, HEAD"),
