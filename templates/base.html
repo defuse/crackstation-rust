@@ -56,8 +56,8 @@
         <a href="https://defuse.ca/pastebin.htm">Secure Pastebin</a>
     </div>
     <div class="row">
-        <span class="hits">Page Hits: <b>{{ ctx.hit_counts.page_hits }}</b></span>
-        <span class="hits">Unique Hits: <b>{{ ctx.hit_counts.unique_hits }}</b></span>
+        <span class="hits">Page Hits: <b>{{ ctx.hit_counts.page_hits_grouped() }}</b></span>
+        <span class="hits">Unique Hits: <b>{{ ctx.hit_counts.unique_hits_grouped() }}</b></span>
         <span class="footlinks">
             <a rel="license" href="http://creativecommons.org/licenses/by-sa/3.0/deed.en_US"><img
                src="/images/cc-by-sa.png" alt="Creative Commons License" /></a>

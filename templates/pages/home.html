@@ -49,7 +49,7 @@ sha512, ripeMD160, whirlpool, MySQL 4.1+ (sha1(sha1_bin)), QubesV3.1BackupDefaul
     <span class="stat"><i>partial:</i> <b>{{ summary.partial }}</b></span>
     <span class="stat"><i>not found:</i> <b>{{ summary.not_found }}</b></span>
     <span class="stat"><i>invalid:</i> <b>{{ summary.invalid }}</b></span>
-    <span class="stat"><i>candidates examined:</i> <b>{{ summary.candidates }}</b></span>
+    <span class="stat"><i>candidates examined:</i> <b>{{ summary.candidates_grouped() }}</b></span>
 </div></caption>
 <tr><th>Hash</th><th>Type</th><th>Result</th></tr>
 {% for result in results %}
@@ -66,7 +66,7 @@ sha512, ripeMD160, whirlpool, MySQL 4.1+ (sha1(sha1_bin)), QubesV3.1BackupDefaul
 {% endif %}
 {% endfor %}
 {% if result.is_truncated() %}
-<tr class="more"><td>{{ result.hash }}</td><td>&nbsp;</td><td>{{ result.hidden_matches() }} more not shown (of {{ result.total_matches }} total).</td></tr>
+<tr class="more"><td>{{ result.hash }}</td><td>&nbsp;</td><td>{{ result.hidden_matches_grouped() }} more not shown (of {{ result.total_matches_grouped() }} total).</td></tr>
 {% endif %}
 {% endif %}
 {% endfor %}

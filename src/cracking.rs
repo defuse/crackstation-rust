@@ -71,6 +71,11 @@ impl ResultSummary {
         summary
     }
 
+    /// `candidates` is the only figure here that gets large enough to need grouping.
+    pub fn candidates_grouped(&self) -> String {
+        crate::libs::util::group_digits(self.candidates as u64)
+    }
+
     /// Every hash falls into exactly one bucket, so the four must account for all of them.
     /// Kept as a method rather than a comment so the tests can assert it directly.
     pub fn is_exhaustive(&self) -> bool {
@@ -82,6 +87,15 @@ impl CrackResult {
     /// How many matches exist that are not being shown.
     pub fn hidden_matches(&self) -> usize {
         self.total_matches.saturating_sub(self.matches.len())
+    }
+
+    /// The two counts the truncation row shows, grouped to match the summary above it.
+    pub fn hidden_matches_grouped(&self) -> String {
+        crate::libs::util::group_digits(self.hidden_matches() as u64)
+    }
+
+    pub fn total_matches_grouped(&self) -> String {
+        crate::libs::util::group_digits(self.total_matches as u64)
     }
 
     /// Whether the results table should say it is showing a subset.

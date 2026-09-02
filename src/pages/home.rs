@@ -409,7 +409,7 @@ mod tests {
         let html = page.render().expect("must render");
         assert_eq!(
             line_containing(&html, "class=\"more\""),
-            "<tr class=\"more\"><td>abc</td><td>&nbsp;</td><td>4095 more not shown (of 4096 total).</td></tr>"
+            "<tr class=\"more\"><td>abc</td><td>&nbsp;</td><td>4,095 more not shown (of 4,096 total).</td></tr>"
         );
     }
 

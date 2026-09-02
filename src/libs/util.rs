@@ -364,3 +364,72 @@ mod tests {
         assert!(!is_https(EXTERNAL_IP, &headers));
     }
 }
+
+/// Group a number's digits in threes: `1234567` becomes `"1,234,567"`.
+///
+/// Written here rather than pulled in as a dependency because it is nine lines, and
+/// rather than done in the template because Askama has no thousands separator.
+pub fn group_digits(n: u64) -> String {
+    let digits = n.to_string();
+    let mut out = String::with_capacity(digits.len() + digits.len() / 3);
+    for (i, c) in digits.chars().enumerate() {
+        if i > 0 && (digits.len() - i) % 3 == 0 {
+            out.push(',');
+        }
+        out.push(c);
+    }
+    out
+}
+
+#[cfg(test)]
+mod group_digits_tests {
+    use super::group_digits;
+
+    #[test]
+    fn groups_from_the_right_in_threes() {
+        assert_eq!(group_digits(0), "0");
+        assert_eq!(group_digits(7), "7");
+        assert_eq!(group_digits(999), "999");
+        assert_eq!(group_digits(1_000), "1,000");
+        assert_eq!(group_digits(9_999), "9,999");
+        assert_eq!(group_digits(10_000), "10,000");
+        assert_eq!(group_digits(100_000), "100,000");
+        assert_eq!(group_digits(1_000_000), "1,000,000");
+        assert_eq!(group_digits(1_234_567), "1,234,567");
+    }
+
+    /// The real numbers this renders: a hit counter and a wordlist size.
+    #[test]
+    fn groups_the_values_the_site_actually_shows() {
+        assert_eq!(group_digits(27_376), "27,376");
+        assert_eq!(group_digits(1_493_677_782), "1,493,677,782");
+    }
+
+    /// No separator may be emitted before the first digit, at any length.
+    #[test]
+    fn never_leads_with_a_separator() {
+        for n in [1u64, 10, 100, 1_000, 10_000, 100_000, 1_000_000] {
+            let grouped = group_digits(n);
+            assert!(!grouped.starts_with(','), "{} -> {}", n, grouped);
+        }
+    }
+
+    #[test]
+    fn handles_the_largest_u64() {
+        assert_eq!(group_digits(u64::MAX), "18,446,744,073,709,551,615");
+    }
+
+    /// Stripping the separators must give back exactly the input, for every width.
+    #[test]
+    fn is_reversible_for_every_digit_count() {
+        let mut n: u64 = 1;
+        loop {
+            let grouped = group_digits(n);
+            assert_eq!(grouped.replace(',', ""), n.to_string(), "round trip for {}", n);
+            match n.checked_mul(10) {
+                Some(next) => n = next,
+                None => break,
+            }
+        }
+    }
+}

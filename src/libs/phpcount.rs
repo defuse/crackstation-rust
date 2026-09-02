@@ -100,6 +100,17 @@ pub struct HitCounts {
     pub total_unique_hits: u64,
 }
 
+impl HitCounts {
+    /// The two counters as the footer shows them, digits grouped in threes.
+    pub fn page_hits_grouped(&self) -> String {
+        crate::libs::util::group_digits(self.page_hits)
+    }
+
+    pub fn unique_hits_grouped(&self) -> String {
+        crate::libs::util::group_digits(self.unique_hits)
+    }
+}
+
 #[derive(Clone)]
 pub struct PhpCountService {
     pool: MySqlPool,
