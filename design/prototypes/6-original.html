@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CrackStation — prototype 6, original, repaired</title>
+<style>
+:root{
+  --sans:Verdana,Tahoma,Arial,Helvetica,sans-serif;
+  --serif:"Times New Roman",Times,serif;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,"DejaVu Sans Mono",monospace;
+  --suc:#00FF00; --part:#FFFF00; --fail:#FF0000; --more:#DDDDDD;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:#fff;color:#000;font:10pt/1.55 var(--sans);
+     display:flex;flex-direction:column;min-height:100vh}
+a{color:#00e}
+a:hover{color:#F00}
+
+/* ---------- masthead: logo butts the top-left corner, black fills the rest ---------- */
+.masthead{background:#000;line-height:0}
+.logo{display:block;width:591px;max-width:100%;height:auto;margin:0}
+
+/* ---------- nav: navbg.png was white 1px / black 20px / white 1px. 4px taller here. ---------- */
+.nav{background:#000;border-top:1px solid #fff;border-bottom:1px solid #fff}
+.nav-inner{display:flex;align-items:center;min-height:24px;padding:0 5px;flex-wrap:wrap}
+.nav ul{display:flex;list-style:none;margin:0;padding:0;align-items:center;width:100%}
+.nav a{font:14px/1 var(--sans);color:#fff;text-decoration:none;padding:5px 15px 5px 0;white-space:nowrap}
+.nav a:hover,.nav a[aria-current]{color:#FFAAAA}
+.nav .ext{margin-left:auto;display:flex;align-items:center;gap:14px}
+.nav .ext a{font-size:12px;color:#ccc;padding-right:0;display:flex;align-items:center;gap:5px}
+.nav .ext a:hover{color:#FFAAAA}
+.nav .ext img{height:14px;width:auto;vertical-align:middle}
+#navtoggle,.burger{display:none}
+@media(max-width:820px){
+  .nav ul{display:none;flex-direction:column;align-items:stretch;padding-bottom:4px}
+  .nav ul li{border-top:1px solid #333}
+  .nav a{display:block;padding:11px 0;font-size:14px}
+  .nav .ext{margin-left:0;padding-top:8px}
+  .burger{display:block;font:14px/1 var(--sans);color:#fff;background:transparent;border:0;
+          padding:7px 0;cursor:pointer}
+  #navtoggle:checked ~ ul{display:flex}
+}
+/* undergrad.png: 9px black closed by a 1px white rule */
+.undergrad{height:9px;background:#000;border-bottom:1px solid #fff;margin-top:1px}
+
+/* ---------- content ---------- */
+main{flex:1}
+.content{width:80%;max-width:1000px;min-width:0;margin:0 auto;padding:6px 30px 40px}
+h1{width:100%;text-align:center;margin:0 0 14px;padding:0 0 5px;border-bottom:solid #000 5px;
+   font:normal 25px/1.2 var(--serif)}
+h2{font:normal 16pt/1.3 var(--serif);border-bottom:solid 1px #AAA;margin:26px 0 10px;padding-bottom:3px}
+
+/* ---------- the original form geometry ---------- */
+.io{display:flex;gap:12px;align-items:flex-start}
+.io .field{flex:1;min-width:0}
+textarea{width:100%;display:block;height:180px;resize:vertical;
+         font:13px/1.6 var(--mono);padding:6px;border:solid #000 1px;background:#e9e9e9}
+.side{flex:0 0 302px;display:flex;flex-direction:column;gap:10px;align-items:center}
+.captcha{width:302px;height:76px;border:1px solid #999;background:#e9e9e9;display:flex;
+         align-items:center;justify-content:center;color:#777;font:11px/1 var(--mono);letter-spacing:.14em}
+button{width:200px;padding:9px 0;font:10pt var(--sans);cursor:pointer}
+.supports{font-size:8pt;margin:8px 0 0;padding:0}
+
+/* ---------- status strip ---------- */
+.strip{display:flex;flex-wrap:wrap;gap:0 18px;margin:14px 0 0;padding:7px 9px;
+       background:#f0f0f0;border:solid #000 1px;font:12px/1.5 var(--mono)}
+.strip b{font-weight:700}
+
+/* ---------- results: the current table, minimally repaired ---------- */
+.crackresults{margin-top:10px}
+table.results{border-collapse:collapse;width:auto;font:13px/1.45 var(--mono)}
+table.results th{background:#000;color:#fff;font:700 11px/1 var(--mono);letter-spacing:.1em;
+                 text-transform:uppercase;text-align:left;padding:7px 9px;white-space:nowrap;
+                 border:solid #000 1px}
+table.results td{padding:6px 9px;border:solid #000 1px;color:#000;white-space:nowrap}
+tr.suc{background:var(--suc)} tr.part{background:var(--part)}
+tr.fail{background:var(--fail)} tr.more{background:var(--more);font-style:italic}
+.matched{background:var(--suc);outline:1px solid rgba(0,0,0,.4)}
+.legend{font-size:8pt;margin:8px 0 0}
+.legend .sw{padding:0 4px}
+.downloaddiv{padding:10px;font-size:16pt;text-align:center;margin-top:22px}
+.downloaddiv a{color:#000;padding:5px}
+
+/* ---------- footer: inverted transition, then the black bar ---------- */
+.footerborder{height:9px;background:#000;border-top:1px solid #fff}
+footer{background:#000;color:#fff;font-size:12px;padding:12px 0 16px}
+footer .inner{width:80%;max-width:1000px;margin:0 auto;padding:0 30px;
+              display:flex;flex-wrap:wrap;gap:10px 26px;align-items:center}
+footer a{color:#CCC;text-decoration:none}
+footer a:hover{color:#F00}
+.hits{font:12px/1.5 var(--mono);font-variant-numeric:tabular-nums;color:#999}
+.hits b{color:#fff;font-weight:700}
+.footlinks{display:flex;gap:14px;flex-wrap:wrap;margin-left:auto;align-items:center}
+.footlinks img{height:31px;width:auto;vertical-align:middle}
+.tag{position:fixed;right:0;bottom:0;background:#000;color:#fff;border:1px solid #fff;
+     font:11px/1 var(--mono);padding:6px 9px}
+</style></head><body>
+
+<header class="masthead">
+  <a href="#"><img class="logo" src="../../static/images/crackstation_header.png" alt="CrackStation"></a>
+</header>
+
+<nav class="nav"><div class="nav-inner">
+  <input type="checkbox" id="navtoggle"><label class="burger" for="navtoggle">&#9776; Menu</label>
+  <ul>
+    <li><a href="#" aria-current="page">Free Hash Cracker</a></li>
+    <li><a href="#">Wordlist Download</a></li>
+    <li><a href="#">Password Hashing Security</a></li>
+    <li><a href="#">About Us</a></li>
+    <li><a href="#">Contact Us</a></li>
+    <li><a href="#">ToS &amp; Privacy Policy</a></li>
+    <li class="ext">
+      <a href="https://defuse.ca/">Defuse.ca</a>
+      <a href="https://twitter.com/defusesec"><img src="../../static/images/twitter.png" alt="">Twitter</a>
+    </li>
+  </ul>
+</div></nav>
+<div class="undergrad"></div>
+
+<main><div class="content">
+  <h1>Free Password Hash Cracker</h1>
+
+  <p>Enter up to 20 non-salted hashes, one per line:</p>
+
+  <div class="io">
+    <div class="field"><textarea spellcheck="false">5d41402abc4b2a76b9719d911017c592
+aaf4c61ddcc5e8a2dabede0f3b482cd9aea9434d
+e52cac67419a9a220000000000000000
+9b71d224bd62f3785d96d46ad3ea3d73319bfbc2890caadae2dff72519673ca72323c3d99ba5c11d7c7acc6e14b8c5da0c4663475c2e5c3adef46f73bcdec043
+0000000000000000000000000000000000000000
+not-a-hex-hash</textarea></div>
+    <div class="side">
+      <div class="captcha">RECAPTCHA</div>
+      <button type="submit">Crack Hashes</button>
+    </div>
+  </div>
+
+  <p class="supports"><b>Supports:</b> LM, NTLM, md2, md4, md5, md5(md5_hex), md5-half, sha1, sha224,
+     sha256, sha384, sha512, ripeMD160, whirlpool, MySQL 4.1+ (sha1(sha1_bin)), QubesV3.1BackupDefaults</p>
+
+  <div class="crackresults">
+    <div class="strip">
+      <span><b>6</b> hashes</span><span><b>3</b> cracked</span><span><b>1</b> partial</span>
+      <span><b>1</b> not found</span><span><b>1</b> unreadable</span><span><b>27,376</b> candidates examined</span>
+    </div>
+
+    <table class="results">
+      <tr><th>Hash</th><th>Type</th><th>Result</th></tr>
+      <tr class="suc"><td>5d41402abc4b2a76b9719d911017c592</td><td>md5</td><td>hello</td></tr>
+      <tr class="suc"><td>aaf4c61ddcc5e8a2dabede0f3b482cd9aea9434d</td><td>sha1</td><td>hello</td></tr>
+      <tr class="part"><td><span class="matched">e52cac67419a9a22</span>4a3b108f3fa6cb6d</td><td>LM</td><td>password</td></tr>
+      <tr class="more"><td>e52cac67419a9a220000000000000000</td><td>&nbsp;</td><td>27,356 more not shown (of 27,376 total).</td></tr>
+      <tr class="suc"><td>9b71d224bd62f3785d96d46ad3ea3d73319bfbc2890caadae2dff72519673ca72323c3d99ba5c11d7c7acc6e14b8c5da0c4663475c2e5c3adef46f73bcdec043</td><td>sha512</td><td>hello</td></tr>
+      <tr class="fail"><td>0000000000000000000000000000000000000000</td><td>Unknown</td><td>Not found.</td></tr>
+      <tr class="fail"><td>not-a-hex-hash</td><td>Unknown</td><td>Unrecognized hash format.</td></tr>
+    </table>
+
+    <p class="legend"><b>Color Codes:</b> <span class="sw" style="background:#00FF00">Green:</span> Exact match,
+      <span class="sw" style="background:#FFFF00">Yellow:</span> Partial match &mdash; the hash column shows what
+      that word really hashes to, with the <span class="matched">part yours matched</span> highlighted,
+      <span class="sw" style="background:#FF0000">Red:</span> Not found.</p>
+  </div>
+
+  <div class="downloaddiv"><a href="#">Download CrackStation's Wordlist</a></div>
+
+  <h2>How CrackStation Works</h2>
+  <p>CrackStation uses massive pre-computed lookup tables to crack password hashes. These tables store a mapping
+     between the hash of a password, and the correct password for that hash. The hash values are indexed so that
+     it is possible to quickly search the database for a given hash. If the hash is present in the database, the
+     password can be recovered in a fraction of a second. This only works for "unsalted" hashes. For information
+     on password hashing systems that are not vulnerable to pre-computed lookup tables, see our
+     <a href="#">hashing security page</a>.</p>
+</div></main>
+
+<div class="footerborder"></div>
+<footer><div class="inner">
+  <span class="hits">Page Hits: <b>4,201,337</b></span>
+  <span class="hits">Unique Hits: <b>1,204,881</b></span>
+  <span class="footlinks">
+    <a rel="license" href="http://creativecommons.org/licenses/by-sa/3.0/deed.en_US"><img src="../../static/images/cc-by-sa.png" alt="Creative Commons License"></a>
+    <a href="https://defuse.ca/">Defuse Security</a>
+    <a href="https://z.cash/">Zcash</a>
+    <a href="https://defuse.ca/pastebin.htm">Secure Pastebin</a>
+    <a href="https://github.com/defuse/crackstation-rust">Source Code</a>
+  </span>
+</div></footer>
+
+<div class="tag">6 &middot; ORIGINAL, REPAIRED</div>
+</body></html>
