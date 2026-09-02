@@ -50,7 +50,7 @@ a:hover{color:#F00}
 }
 /* undergrad.png is a 10px black-to-transparent fade, the gradient living in the alpha
    channel. Used directly rather than reconstructed -- it is 142 bytes and exact. */
-.undergrad{height:10px;margin-top:1px;
+.undergrad{height:10px;
            background:url('../../static/images/undergrad.png') repeat-x}
 
 /* ---------- content ---------- */
@@ -101,14 +101,15 @@ tr.fail{background:var(--fail)} tr.more{background:var(--more);font-style:italic
 .footerborder{height:10px;
                background:url('../../static/images/undergrad-inverted.png') repeat-x}
 footer{background:#000;color:#fff;font:13px/1.5 var(--mono);padding:12px 0 16px}
-footer .inner{width:80%;max-width:1000px;margin:0 auto;padding:0 30px;
-              display:flex;flex-wrap:wrap;gap:10px 26px;align-items:center}
+footer .inner{width:80%;max-width:1000px;margin:0 auto;padding:0 30px}
+footer .row{display:flex;flex-wrap:wrap;gap:8px 22px;align-items:center}
+footer .row+.row{margin-top:10px;padding-top:10px;border-top:1px solid #333}
 footer a{color:#CCC;text-decoration:none}
 footer a:hover{color:#F00}
 .hits{font-variant-numeric:tabular-nums;color:#999}
 .hits b{color:#fff;font-weight:700}
-.footlinks{display:flex;gap:14px;flex-wrap:wrap;margin-left:auto;align-items:center}
-.footlinks img{height:31px;width:auto;vertical-align:middle}
+.footlinks{margin-left:auto;display:flex;align-items:center}
+.footlinks img{display:block;height:13px;width:auto}
 .tag{position:fixed;right:0;bottom:0;background:#000;color:#fff;border:1px solid #fff;
      font:11px/1 var(--mono);padding:6px 9px}
 </style></head><body>
@@ -123,9 +124,6 @@ footer a:hover{color:#F00}
     <li><a href="#" aria-current="page">Free Hash Cracker</a></li>
     <li><a href="#">Wordlist Download</a></li>
     <li><a href="#">Password Hashing Security</a></li>
-    <li><a href="#">About Us</a></li>
-    <li><a href="#">Contact Us</a></li>
-    <li><a href="#">ToS &amp; Privacy Policy</a></li>
     <li class="ext">
       <a href="https://defuse.ca/">Defuse.ca</a>
       <a href="https://twitter.com/defusesec"><img src="../../static/images/twitter.png" alt="">Twitter</a>
@@ -196,15 +194,23 @@ not-a-hex-hash</textarea></div>
 
 <div class="footerborder"></div>
 <footer><div class="inner">
-  <span class="hits">Page Hits: <b>4,201,337</b></span>
-  <span class="hits">Unique Hits: <b>1,204,881</b></span>
-  <span class="footlinks">
-    <a rel="license" href="http://creativecommons.org/licenses/by-sa/3.0/deed.en_US"><img src="../../static/images/cc-by-sa.png" alt="Creative Commons License"></a>
+  <div class="row">
+    <a href="#">About Us</a>
+    <a href="#">Contact Us</a>
+    <a href="#">ToS &amp; Privacy Policy</a>
+    <a href="https://github.com/defuse/crackstation-rust">Source Code</a>
     <a href="https://defuse.ca/">Defuse Security</a>
     <a href="https://z.cash/">Zcash</a>
     <a href="https://defuse.ca/pastebin.htm">Secure Pastebin</a>
-    <a href="https://github.com/defuse/crackstation-rust">Source Code</a>
-  </span>
+  </div>
+  <div class="row">
+    <span class="hits">Page Hits: <b>4,201,337</b></span>
+    <span class="hits">Unique Hits: <b>1,204,881</b></span>
+    <span class="footlinks">
+      <a rel="license" href="http://creativecommons.org/licenses/by-sa/3.0/deed.en_US"><img
+         src="../../static/images/cc-by-sa.png" alt="Creative Commons License"></a>
+    </span>
+  </div>
 </div></footer>
 
 <div class="tag">6 &middot; ORIGINAL, REPAIRED</div>
