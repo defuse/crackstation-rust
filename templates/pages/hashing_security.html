@@ -487,15 +487,15 @@ It is not enough for the hash to be slow on your server. The attacker won't run 
 code on your CPU, they'll run a hand-optimized version on a few thousand GPU cores, or
 on an FPGA, or on hardware built for nothing else. A function that is slow only because
 it does a lot of arithmetic plays to their strengths. PBKDF2 is the clearest case: it
-needs almost no memory, so thousands of copies of it fit on one card.
+needs almost no memory, so thousands of copies of it fit on one card. The key is to also require lots of memory.
 </p>
 
 <p>
-A memory-hard function is designed so that each guess needs a large block of memory,
-and so that the attacker can't trade that memory back for extra computation. That makes
-them buy memory and memory bandwidth per guess instead of just arithmetic units. bcrypt
-needs about 4KB, which is why it held up against GPUs better than PBKDF2 did. Argon2
-lets you ask for tens or hundreds of megabytes.
+A memory-hard function is designed so that each guess needs a large block of
+memory, so that the hardware required to check many guesses in parallel is more
+expensive. Bare hashes and PBKDF2, no matter the iteration count, require little
+memory, so they should be avoided. Algorithms like Argon2 let you tune the
+amount of memory required.
 </p>
 
 <p>
@@ -747,6 +747,11 @@ that breaches are detected and responded to promptly.
 <a name="faq"></a>
 <h2>Frequently Asked Questions</h2>
 <h3>What hash algorithm should I use?</h3>
+
+{% include "pages/_hash_libraries.html" %}
+
+<br />
+
 <span style="color: green;"><b>DO</b></span> use:
 
 <ul class="moveul">
