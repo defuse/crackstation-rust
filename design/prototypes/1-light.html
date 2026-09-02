@@ -68,14 +68,13 @@ button:hover{background:var(--accent)}
 .strip b{color:var(--ink);font-weight:600}
 
 /* ---------- results ---------- */
-.rscroll{overflow-x:auto}
+.rscroll{width:100vw;margin-left:calc(50% - 50vw);padding:0 20px}
 table.results{width:100%;border-collapse:collapse;font:13px/1.45 var(--mono)}
 table.results th{font:600 11px/1 var(--mono);letter-spacing:.11em;text-transform:uppercase;
-                 text-align:left;padding:8px 9px;border:1px solid var(--grid);
+                 text-align:left;padding:8px 9px;white-space:nowrap;border:1px solid var(--grid);
                  background:var(--grid);color:var(--panel)}
 table.results td{padding:7px 9px;border:1px solid var(--grid);color:#000;white-space:nowrap}
-table.results td:nth-child(2){width:1%}
-table.results td:nth-child(3){white-space:normal;overflow-wrap:anywhere}
+table.results td:nth-child(2),table.results td:nth-child(3){width:1%}
 tr.suc{background:var(--suc)} tr.part{background:var(--part)}
 tr.fail{background:var(--fail)} tr.more{background:var(--more);font-style:italic}
 .matched{background:var(--suc);outline:1px solid rgba(0,0,0,.35)}

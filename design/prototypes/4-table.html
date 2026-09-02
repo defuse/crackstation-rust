@@ -19,20 +19,18 @@ h2:first-of-type{margin-top:8px}
 .A td{text-align:left;padding:5px;font-family:monospace;border:solid black 1px}
 
 /* ============ B/C: revised — same density, grid kept ============ */
-.R{overflow-x:auto}
 .R table{width:100%;border-collapse:collapse;font:13px/1.45 var(--mono)}
 .R th{font:600 11px/1 var(--mono);letter-spacing:.11em;text-transform:uppercase;
       text-align:left;padding:8px 9px;border:1px solid #111;background:#111;color:#fff}
 .R td{padding:7px 9px;border:1px solid #111;color:#000;white-space:nowrap}
-.R td:nth-child(2){width:1%}
-.R td:nth-child(3){white-space:normal;overflow-wrap:anywhere}
+.R td:nth-child(2),.R td:nth-child(3){width:1%}
 
 .suc{background:#00FF00} .part{background:#FFFF00}
 .fail{background:#FF0000} .more{background:#DDDDDD;font-style:italic}
 .matched{background:#00FF00;outline:1px solid rgba(0,0,0,.35)}
 .A .matched{background:#00FF00}
 .dark{background:#0b0b0e;padding:18px;margin-top:0}
-.dark .R th{border-color:#3a3a45}
+.dark .R th{background:#1b1b22;color:#c9c9d2;border-color:#111}
 </style></head><body><div class="wrap">
 
 <h2>A &middot; current site, reproduced exactly</h2>
@@ -49,7 +47,7 @@ h2:first-of-type{margin-top:8px}
 </table></div>
 
 <h2>B &middot; revised, light</h2>
-<p class="note">Same density and the same 1px grid. Changes are small: 13px monospace instead of 10pt so it is legible without being bigger on screen, borders collapsed so lines are single rather than doubled, hash and type never wrap, and the table scrolls sideways instead of reflowing when a sha512 exceeds the width. Header becomes a real header instead of centred plain text.</p>
+<p class="note">Same density and the same 1px grid. Changes are small: 13px monospace instead of 10pt, borders collapsed so lines are single rather than doubled, a real header row, and 7px padding instead of 5px. Nothing wraps anywhere, so every row is exactly one line tall and the table takes whatever width it needs.</p>
 <div class="R"><table class="results">
 <tr><th>Hash</th><th>Type</th><th>Result</th></tr>
 <tr class="suc"><td>5d41402abc4b2a76b9719d911017c592</td><td>md5</td><td>hello</td></tr>
@@ -62,7 +60,7 @@ h2:first-of-type{margin-top:8px}
 </table></div>
 
 <h2>C &middot; revised, on dark chrome</h2>
-<p class="note">Identical table. Only the surface behind it changes, to show whether the colours gain or lose against near-black.</p>
+<p class="note">Identical table, near-black surface. The header is grey rather than black so the top edge of the table reads against the page.</p>
 <div class="dark"><div class="R"><table class="results">
 <tr><th>Hash</th><th>Type</th><th>Result</th></tr>
 <tr class="suc"><td>5d41402abc4b2a76b9719d911017c592</td><td>md5</td><td>hello</td></tr>
