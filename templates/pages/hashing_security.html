@@ -608,9 +608,9 @@ the server, but it's not.  </p>
 <p>
 The problem is that the client-side hash logically <em>becomes</em> the user's
 password. All the user needs to do to authenticate is tell the server the hash
-of their password. If a bad guy got a user's <em>hash</em> they could use it to
-authenticate to the server, without knowing the user's password! So, if the bad
-guy somehow steals the database of hashes from this hypothetical website,
+of their password. If an attacker got a user's <em>hash</em> they could use it to
+authenticate to the server, without knowing the user's password! So, if the
+attacker somehow steals the database of hashes from this hypothetical website,
 they'll have immediate access to everyone's accounts without having to guess any
 passwords.
 </p>
@@ -645,7 +645,7 @@ certainly a good idea, but consider the following points for your implementation
         <p>
         You need to salt the client-side hashes too. The obvious solution is to
         make the client-side script ask the server for the user's salt. Don't do
-        that, because it lets the bad guys check if a username is valid without
+        that, because it lets attackers check if a username is valid without
         knowing the password. Since you're hashing and salting (with a good
         salt) on the server too, it's OK to use the username (or email)
         concatenated with a site-specific string (e.g. domain name) as the
