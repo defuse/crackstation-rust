@@ -241,26 +241,31 @@ caption.summary > div {
     display: flex;
     flex-wrap: wrap;
     justify-content: center;
-    gap: 20px;
+    gap: 14px;
 }
 .downloaddiv a {
-    /* Side by side, sharing the row equally, wrapping to a column when the window is
-       too narrow. Default align-items: stretch keeps them the same height even when
-       one label wraps to two lines and the other does not. */
-    flex: 1 1 300px;
-    max-width: 480px;
+    /* Each sized to its own label rather than to an equal share, so neither has to
+       wrap: forcing them equal makes the longer label break before "Lookup". They
+       still line up in height, since align-items defaults to stretch. */
+    flex: 0 1 auto;
     text-align: center;
     text-decoration: none;
     background: #fff;
     color: #000;
     border: 1px solid #999;
     border-radius: 6px;
-    padding: 13px 26px 12px;
+    padding: 13px 18px 12px;
 }
 .downloaddiv a:hover { background: #000; border-color: #000; color: #fff; }
-.downloaddiv .dl-main { display: block; font: 700 15px/1.2 var(--sans); }
+.downloaddiv .dl-main { display: block; font: 700 15px/1.2 var(--sans); white-space: nowrap; }
 .downloaddiv .dl-sub { display: block; margin-top: 5px; font: 12px/1.2 var(--chrome); color: #555; }
 .downloaddiv a:hover .dl-sub { color: #bbb; }
+/* On a narrow window they stack full width, and the label may wrap after all --
+   nowrap there would push the button past the screen. */
+@media (max-width: 700px) {
+    .downloaddiv a { flex: 1 1 100%; }
+    .downloaddiv .dl-main { white-space: normal; }
+}
 
 /* ===== footer ====================================================== */
 .footerborder {
