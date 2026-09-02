@@ -373,7 +373,7 @@ pub fn group_digits(n: u64) -> String {
     let digits = n.to_string();
     let mut out = String::with_capacity(digits.len() + digits.len() / 3);
     for (i, c) in digits.chars().enumerate() {
-        if i > 0 && (digits.len() - i) % 3 == 0 {
+        if i > 0 && (digits.len() - i).is_multiple_of(3) {
             out.push(',');
         }
         out.push(c);
@@ -425,7 +425,12 @@ mod group_digits_tests {
         let mut n: u64 = 1;
         loop {
             let grouped = group_digits(n);
-            assert_eq!(grouped.replace(',', ""), n.to_string(), "round trip for {}", n);
+            assert_eq!(
+                grouped.replace(',', ""),
+                n.to_string(),
+                "round trip for {}",
+                n
+            );
             match n.checked_mul(10) {
                 Some(next) => n = next,
                 None => break,
