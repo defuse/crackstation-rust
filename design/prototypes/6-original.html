@@ -56,7 +56,7 @@ a:hover{color:#F00}
 /* ---------- content ---------- */
 main{flex:1}
 .content{width:80%;max-width:1000px;min-width:0;margin:0 auto;padding:6px 30px 40px}
-h1{width:100%;text-align:center;margin:0 0 14px;padding:0 0 5px;border-bottom:solid #000 5px;
+h1{width:100%;text-align:center;margin:0 0 14px;padding:0 0 5px;border-bottom:solid #000 2px;
    font:normal 25px/1.2 var(--serif)}
 h2{font:normal 16pt/1.3 var(--serif);border-bottom:solid 1px #AAA;margin:26px 0 10px;padding-bottom:3px}
 
@@ -75,10 +75,14 @@ button{width:200px;padding:9px 0;font:10pt var(--sans);cursor:pointer}
 /* the caption box takes the table's width; the flex row goes inside it, because
    setting display:flex on the caption itself drops it out of table layout */
 caption.strip{caption-side:top;text-align:left}
-caption.strip>div{display:flex;flex-wrap:wrap;gap:0 18px;padding:7px 9px;
-       background:#f0f0f0;border:solid #000 1px;border-bottom:0;
-       font:13px/1.5 var(--mono);color:#333}
-caption.strip b{color:#000;font-weight:700}
+caption.strip>div{display:flex;flex-wrap:wrap;align-items:baseline;row-gap:4px;
+       padding:6px 9px;background:#f0f0f0;border:solid #000 1px;border-bottom:0;
+       font:13px/1.5 var(--mono)}
+.stat{display:inline-flex;gap:6px;align-items:baseline;padding:0 12px}
+.stat:first-child{padding-left:0}
+.stat+.stat{border-left:1px solid #bdbdbd}
+.stat i{font-style:normal;color:#555}
+.stat b{font-weight:700;color:#000;font-variant-numeric:tabular-nums}
 
 /* ---------- results: the current table, minimally repaired ---------- */
 /* centred on the viewport, not on the text column. `safe` keeps the left edge
@@ -159,8 +163,12 @@ not-a-hex-hash</textarea></div>
   <div>
     <table class="results">
       <caption class="strip"><div>
-        <span><b>6</b> hashes</span><span><b>3</b> cracked</span><span><b>1</b> partial</span>
-        <span><b>1</b> not found</span><span><b>1</b> unreadable</span><span><b>27,376</b> candidates examined</span>
+        <span class="stat"><i>hashes:</i> <b>6</b></span>
+        <span class="stat"><i>cracked:</i> <b>3</b></span>
+        <span class="stat"><i>partial:</i> <b>1</b></span>
+        <span class="stat"><i>not found:</i> <b>1</b></span>
+        <span class="stat"><i>unreadable:</i> <b>1</b></span>
+        <span class="stat"><i>candidates examined:</i> <b>27,376</b></span>
       </div></caption>
       <tr><th>Hash</th><th>Type</th><th>Result</th></tr>
       <tr class="suc"><td>5d41402abc4b2a76b9719d911017c592</td><td>md5</td><td>hello</td></tr>
