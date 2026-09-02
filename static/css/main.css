@@ -236,16 +236,23 @@ caption.summary > div {
 .legend .sw { padding: 0 4px; }
 
 /* ===== wordlist download =========================================== */
-.downloaddiv { margin: 30px 0 0; text-align: center; }
+.downloaddiv {
+    margin: 30px 0 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+}
 .downloaddiv a {
-    display: inline-block;
+    /* both links take the width of the wider, so a stack of them lines up */
+    width: min(100%, 480px);
+    text-align: center;
     text-decoration: none;
     background: #fff;
     color: #000;
     border: 1px solid #999;
     border-radius: 6px;
     padding: 13px 26px 12px;
-    min-width: 340px;
 }
 .downloaddiv a:hover { background: #000; border-color: #000; color: #fff; }
 .downloaddiv .dl-main { display: block; font: 700 15px/1.2 var(--sans); }
