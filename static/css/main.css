@@ -258,7 +258,7 @@ caption.summary > div {
     color: #000;
     border: 1px solid #999;
     border-radius: 6px;
-    padding: 13px 18px 12px;
+    padding: 13px 28px 12px;
 }
 .downloaddiv a:hover { background: #000; border-color: #000; color: #fff; }
 .downloaddiv .dl-main { display: block; font: 700 15px/1.2 var(--sans); white-space: nowrap; }
