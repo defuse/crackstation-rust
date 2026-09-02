@@ -20,7 +20,8 @@ a:hover{color:#F00}
 .masthead{background:#000;line-height:0}
 .logo{display:block;width:591px;max-width:100%;height:auto;margin:0}
 
-/* ---------- nav: navbg.png was white 1px / black 20px / white 1px. 4px taller here. ---------- */
+/* ---------- nav: navbg.png is white 1px / black 20px / white 1px -- flat, not a
+   gradient, so borders reproduce it exactly and allow the extra 4px of height. ---------- */
 .nav{background:#000;border-top:1px solid #fff;border-bottom:1px solid #fff}
 .nav-inner{display:flex;align-items:center;min-height:24px;padding:0 5px;flex-wrap:wrap}
 .nav ul{display:flex;list-style:none;margin:0;padding:0;align-items:center;width:100%}
@@ -40,8 +41,10 @@ a:hover{color:#F00}
           padding:7px 0;cursor:pointer}
   #navtoggle:checked ~ ul{display:flex}
 }
-/* undergrad.png: 9px black closed by a 1px white rule */
-.undergrad{height:9px;background:#000;border-bottom:1px solid #fff;margin-top:1px}
+/* undergrad.png is a 10px black-to-transparent fade, the gradient living in the alpha
+   channel. Used directly rather than reconstructed -- it is 142 bytes and exact. */
+.undergrad{height:10px;margin-top:1px;
+           background:url('../../static/images/undergrad.png') repeat-x}
 
 /* ---------- content ---------- */
 main{flex:1}
@@ -82,7 +85,8 @@ tr.fail{background:var(--fail)} tr.more{background:var(--more);font-style:italic
 .downloaddiv a{color:#000;padding:5px}
 
 /* ---------- footer: inverted transition, then the black bar ---------- */
-.footerborder{height:9px;background:#000;border-top:1px solid #fff}
+.footerborder{height:10px;
+               background:url('../../static/images/undergrad-inverted.png') repeat-x}
 footer{background:#000;color:#fff;font-size:12px;padding:12px 0 16px}
 footer .inner{width:80%;max-width:1000px;margin:0 auto;padding:0 30px;
               display:flex;flex-wrap:wrap;gap:10px 26px;align-items:center}
