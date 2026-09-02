@@ -327,6 +327,8 @@ footer a:hover { color: #F00; }
 /* the two per-platform tables: CSPRNGs, and password hashing libraries */
 #rnglist, .langtable { margin: 0 auto; }
 #rnglist td, .langtable td { border: solid 1px #AAAAAA; padding: 10px; }
+/* the copy inside the red warning box needs its own ground to stay legible */
+.langtable th, .langtable td { background: #fff; }
 .passcrack {
     padding: 10px;
     font-family: var(--data);

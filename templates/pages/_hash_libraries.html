@@ -1,0 +1,16 @@
+{# The authoritative per-platform recommendation. Included twice: in the warning at
+   the top and at the head of the RIGHT Way section. Edit here, not there. #}
+<table class="langtable">
+    <tr><th>Platform</th><th>Password hashing library</th></tr>
+    <tr><td>PHP</td><td><a href="https://www.php.net/manual/en/function.password-hash.php">password_hash</a> with <span class="ic">PASSWORD_ARGON2ID</span>, built in since 7.3</td></tr>
+    <tr><td>Python</td><td><a href="https://pypi.org/project/argon2-cffi/">argon2-cffi</a></td></tr>
+    <tr><td>Ruby</td><td><a href="https://rubygems.org/gems/argon2">argon2</a></td></tr>
+    <tr><td>Go</td><td><a href="https://pkg.go.dev/golang.org/x/crypto/argon2">golang.org/x/crypto/argon2</a></td></tr>
+    <tr><td>Rust</td><td><a href="https://docs.rs/argon2">argon2</a></td></tr>
+    <tr><td>Node.js</td><td><a href="https://www.npmjs.com/package/argon2">argon2</a></td></tr>
+    <tr><td>Java</td><td><a href="https://www.bouncycastle.org/">Bouncy Castle</a> Argon2BytesGenerator, or Spring Security's Argon2PasswordEncoder</td></tr>
+    <tr><td>Dot NET (C#, VB)</td><td><a href="https://www.nuget.org/packages/Konscious.Security.Cryptography.Argon2">Konscious.Security.Cryptography.Argon2</a></td></tr>
+    <tr><td>Perl</td><td><a href="https://metacpan.org/pod/Crypt::Argon2">Crypt::Argon2</a></td></tr>
+    <tr><td>C/C++</td><td><a href="https://doc.libsodium.org/password_hashing">libsodium</a>, or the <a href="https://github.com/P-H-C/phc-winner-argon2">reference implementation</a></td></tr>
+    <tr><td>Anything else</td><td>A binding to <a href="https://doc.libsodium.org/password_hashing">libsodium</a></td></tr>
+</table>
