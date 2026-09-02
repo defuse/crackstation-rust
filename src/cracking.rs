@@ -37,8 +37,6 @@ pub struct ResultSummary {
     pub not_found: usize,
     /// Inputs that are not a hash this site can look up.
     pub invalid: usize,
-    /// Every match found across every table, including those the per-hash cap withheld.
-    pub candidates: usize,
 }
 
 impl ResultSummary {
@@ -49,10 +47,8 @@ impl ResultSummary {
             partial: 0,
             not_found: 0,
             invalid: 0,
-            candidates: 0,
         };
         for result in results {
-            summary.candidates += result.total_matches;
             if result.format_error {
                 summary.invalid += 1;
             } else if result.matches.is_empty() {
@@ -69,11 +65,6 @@ impl ResultSummary {
             summary
         );
         summary
-    }
-
-    /// `candidates` is the only figure here that gets large enough to need grouping.
-    pub fn candidates_grouped(&self) -> String {
-        crate::libs::util::group_digits(self.candidates as u64)
     }
 
     /// Every hash falls into exactly one bucket, so the four must account for all of them.
@@ -423,8 +414,7 @@ mod summary_tests {
                 cracked: 1,
                 partial: 1,
                 not_found: 1,
-                invalid: 1,
-                candidates: 31
+                invalid: 1
             }
         );
         assert!(summary.is_exhaustive());
@@ -450,14 +440,6 @@ mod summary_tests {
         assert!(summary.is_exhaustive());
     }
 
-    /// `candidates` counts every match found, including the ones the per-hash cap
-    /// withheld -- that is the number the truncation row is talking about.
-    #[test]
-    fn candidates_counts_withheld_matches_too() {
-        let summary = ResultSummary::of(&[partial("a", 27376), full("b")]);
-        assert_eq!(summary.candidates, 27377);
-    }
-
     #[test]
     fn an_empty_submission_is_all_zeroes_and_still_exhaustive() {
         let summary = ResultSummary::of(&[]);
@@ -468,8 +450,7 @@ mod summary_tests {
                 cracked: 0,
                 partial: 0,
                 not_found: 0,
-                invalid: 0,
-                candidates: 0
+                invalid: 0
             }
         );
         assert!(summary.is_exhaustive());
