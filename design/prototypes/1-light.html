@@ -8,7 +8,7 @@
 :root{
   --bg:#f4f4f2; --panel:#ffffff; --ink:#111114; --ink-dim:#5c5c66;
   --rule:#d6d6d2; --rule-strong:#111114; --accent:#1a4fd6;
-  --gutter-ink:#a8a8a4; --strip-bg:#ebebe8; --field:#fbfbfa;
+  --gutter-ink:#a8a8a4; --strip-bg:#ebebe8; --grid:#111114; --field:#fbfbfa;
   --suc:#00FF00; --part:#FFFF00; --fail:#FF0000; --more:#DDDDDD;
   --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,"DejaVu Sans Mono",monospace;
   --sans:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
@@ -68,15 +68,17 @@ button:hover{background:var(--accent)}
 .strip b{color:var(--ink);font-weight:600}
 
 /* ---------- results ---------- */
-table.results{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:15px}
-table.results th{font-size:12px;letter-spacing:.12em;text-transform:uppercase;text-align:left;
-                 color:var(--ink-dim);font-weight:600;padding:10px 16px;
-                 border-bottom:1px solid var(--rule)}
-table.results td{padding:11px 16px;vertical-align:top;overflow-wrap:anywhere;color:#000}
-table.results td:nth-child(2){white-space:nowrap;width:1%}
+.rscroll{overflow-x:auto}
+table.results{width:100%;border-collapse:collapse;font:13px/1.45 var(--mono)}
+table.results th{font:600 11px/1 var(--mono);letter-spacing:.11em;text-transform:uppercase;
+                 text-align:left;padding:8px 9px;border:1px solid var(--grid);
+                 background:var(--grid);color:var(--panel)}
+table.results td{padding:7px 9px;border:1px solid var(--grid);color:#000;white-space:nowrap}
+table.results td:nth-child(2){width:1%}
+table.results td:nth-child(3){white-space:normal;overflow-wrap:anywhere}
 tr.suc{background:var(--suc)} tr.part{background:var(--part)}
 tr.fail{background:var(--fail)} tr.more{background:var(--more);font-style:italic}
-.matched{background:var(--suc);box-shadow:0 0 0 1px rgba(0,0,0,.25)}
+.matched{background:var(--suc);outline:1px solid rgba(0,0,0,.35)}
 .legend{font:12px/1.6 var(--mono);color:var(--ink-dim);padding:12px 16px;
         border-top:1px solid var(--rule)}
 .supports{font:12px/1.6 var(--mono);color:var(--ink-dim);margin:10px 2px 0}
@@ -127,7 +129,7 @@ not-a-hex-hash</textarea></div>
       <span><b>27,376</b> candidates examined</span>
     </div>
 
-    <table class="results">
+    <div class="rscroll"><table class="results">
       <tr><th>Hash</th><th>Type</th><th>Result</th></tr>
       <tr class="suc"><td>5d41402abc4b2a76b9719d911017c592</td><td>md5</td><td>hello</td></tr>
       <tr class="suc"><td>aaf4c61ddcc5e8a2dabede0f3b482cd9aea9434d</td><td>sha1</td><td>hello</td></tr>
@@ -137,7 +139,7 @@ not-a-hex-hash</textarea></div>
       <tr class="fail"><td>0000000000000000000000000000000000000000</td><td>Unknown</td><td>Not found.</td></tr>
       <tr class="fail"><td>not-a-hex-hash</td><td>Unknown</td><td>Unrecognized hash format.</td></tr>
       <tr class="suc"><td>&#48;&#48;&#48;c285457fc971f862a79b786476c78812c8897063c6fa9c045f579a3b2d63f</td><td>sha256</td><td>monkey</td></tr>
-    </table>
+    </table></div>
 
     <div class="legend">green &middot; exact match &nbsp; yellow &middot; prefix match, hash column shows what that word really hashes to &nbsp; red &middot; not found</div>
   </div>
