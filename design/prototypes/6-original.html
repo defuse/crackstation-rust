@@ -6,7 +6,8 @@
 :root{
   --sans:Verdana,Tahoma,Arial,Helvetica,sans-serif;
   --serif:"Times New Roman",Times,serif;
-  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,"DejaVu Sans Mono",monospace;
+  --mono:"Courier New",Courier,monospace;
+  --data:ui-monospace,SFMono-Regular,Menlo,Consolas,"DejaVu Sans Mono",monospace;
   --suc:#00FF00; --part:#FFFF00; --fail:#FF0000; --more:#DDDDDD;
 }
 *{box-sizing:border-box}
@@ -22,22 +23,23 @@ a:hover{color:#F00}
 
 /* ---------- nav: navbg.png is white 1px / black 20px / white 1px -- flat, not a
    gradient, so borders reproduce it exactly and allow the extra 4px of height. ---------- */
-.nav{background:#000;border-top:1px solid #fff;border-bottom:1px solid #fff}
-.nav-inner{display:flex;align-items:center;min-height:24px;padding:0 5px;flex-wrap:wrap}
+.nav{background:#000;background:linear-gradient(to bottom,#111 0%,#1a1a1a 30%,#000 50%);
+      border-top:1px solid #fff;border-bottom:1px solid #fff;font:14px/30px var(--mono)}
+.nav-inner{display:flex;align-items:center;min-height:30px;padding:0 25px;flex-wrap:wrap}
 .nav ul{display:flex;list-style:none;margin:0;padding:0;align-items:center;width:100%}
-.nav a{font:14px/1 var(--sans);color:#fff;text-decoration:none;padding:5px 15px 5px 0;white-space:nowrap}
+.nav a{font:14px/30px var(--mono);color:#fff;text-decoration:none;padding:0 18px 0 0;white-space:nowrap}
 .nav a:hover,.nav a[aria-current]{color:#FFAAAA}
-.nav .ext{margin-left:auto;display:flex;align-items:center;gap:14px}
-.nav .ext a{font-size:12px;color:#ccc;padding-right:0;display:flex;align-items:center;gap:5px}
+.nav .ext{margin-left:auto;display:flex;align-items:center;gap:16px}
+.nav .ext a{font-size:13px;color:#ccc;padding-right:0;display:flex;align-items:center;gap:5px}
 .nav .ext a:hover{color:#FFAAAA}
 .nav .ext img{height:14px;width:auto;vertical-align:middle}
 #navtoggle,.burger{display:none}
 @media(max-width:820px){
   .nav ul{display:none;flex-direction:column;align-items:stretch;padding-bottom:4px}
   .nav ul li{border-top:1px solid #333}
-  .nav a{display:block;padding:11px 0;font-size:14px}
+  .nav a{display:block;padding:11px 0;font-size:14px;line-height:1}
   .nav .ext{margin-left:0;padding-top:8px}
-  .burger{display:block;font:14px/1 var(--sans);color:#fff;background:transparent;border:0;
+  .burger{display:block;font:14px/1 var(--mono);color:#fff;background:transparent;border:0;
           padding:7px 0;cursor:pointer}
   #navtoggle:checked ~ ul{display:flex}
 }
@@ -65,16 +67,16 @@ button{width:200px;padding:9px 0;font:10pt var(--sans);cursor:pointer}
 .supports{font-size:8pt;margin:8px 0 0;padding:0}
 
 /* ---------- status strip ---------- */
-.strip{display:flex;flex-wrap:wrap;gap:0 18px;margin:14px 0 0;padding:7px 9px;
-       background:#f0f0f0;border:solid #000 1px;font:12px/1.5 var(--mono)}
-.strip b{font-weight:700}
+caption.strip{caption-side:top;text-align:left;display:flex;flex-wrap:wrap;gap:0 18px;
+       padding:7px 9px;background:#f0f0f0;border:solid #000 1px;border-bottom:0;
+       font:13px/1.5 var(--mono);color:#333}
+caption.strip b{color:#000;font-weight:700}
 
 /* ---------- results: the current table, minimally repaired ---------- */
 .crackresults{margin-top:10px}
-table.results{border-collapse:collapse;width:auto;font:13px/1.45 var(--mono)}
-table.results th{background:#000;color:#fff;font:700 11px/1 var(--mono);letter-spacing:.1em;
-                 text-transform:uppercase;text-align:left;padding:7px 9px;white-space:nowrap;
-                 border:solid #000 1px}
+table.results{border-collapse:collapse;width:auto;font:13px/1.45 var(--data)}
+table.results th{background:#000;color:#fff;font:700 13px/1.45 var(--mono);text-align:left;
+                 padding:6px 9px;white-space:nowrap;border:solid #000 1px}
 table.results td{padding:6px 9px;border:solid #000 1px;color:#000;white-space:nowrap}
 tr.suc{background:var(--suc)} tr.part{background:var(--part)}
 tr.fail{background:var(--fail)} tr.more{background:var(--more);font-style:italic}
@@ -87,12 +89,12 @@ tr.fail{background:var(--fail)} tr.more{background:var(--more);font-style:italic
 /* ---------- footer: inverted transition, then the black bar ---------- */
 .footerborder{height:10px;
                background:url('../../static/images/undergrad-inverted.png') repeat-x}
-footer{background:#000;color:#fff;font-size:12px;padding:12px 0 16px}
+footer{background:#000;color:#fff;font:13px/1.5 var(--mono);padding:12px 0 16px}
 footer .inner{width:80%;max-width:1000px;margin:0 auto;padding:0 30px;
               display:flex;flex-wrap:wrap;gap:10px 26px;align-items:center}
 footer a{color:#CCC;text-decoration:none}
 footer a:hover{color:#F00}
-.hits{font:12px/1.5 var(--mono);font-variant-numeric:tabular-nums;color:#999}
+.hits{font-variant-numeric:tabular-nums;color:#999}
 .hits b{color:#fff;font-weight:700}
 .footlinks{display:flex;gap:14px;flex-wrap:wrap;margin-left:auto;align-items:center}
 .footlinks img{height:31px;width:auto;vertical-align:middle}
@@ -143,12 +145,11 @@ not-a-hex-hash</textarea></div>
      sha256, sha384, sha512, ripeMD160, whirlpool, MySQL 4.1+ (sha1(sha1_bin)), QubesV3.1BackupDefaults</p>
 
   <div class="crackresults">
-    <div class="strip">
-      <span><b>6</b> hashes</span><span><b>3</b> cracked</span><span><b>1</b> partial</span>
-      <span><b>1</b> not found</span><span><b>1</b> unreadable</span><span><b>27,376</b> candidates examined</span>
-    </div>
-
     <table class="results">
+      <caption class="strip">
+        <span><b>6</b> hashes</span><span><b>3</b> cracked</span><span><b>1</b> partial</span>
+        <span><b>1</b> not found</span><span><b>1</b> unreadable</span><span><b>27,376</b> candidates examined</span>
+      </caption>
       <tr><th>Hash</th><th>Type</th><th>Result</th></tr>
       <tr class="suc"><td>5d41402abc4b2a76b9719d911017c592</td><td>md5</td><td>hello</td></tr>
       <tr class="suc"><td>aaf4c61ddcc5e8a2dabede0f3b482cd9aea9434d</td><td>sha1</td><td>hello</td></tr>
