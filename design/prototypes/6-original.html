@@ -98,8 +98,15 @@ tr.fail{background:var(--fail)} tr.more{background:var(--more);font-style:italic
 .matched{background:var(--suc);outline:1px solid rgba(0,0,0,.4)}
 .legend{font-size:8pt;margin:8px 0 0}
 .legend .sw{padding:0 4px}
-.downloaddiv{padding:10px;font-size:16pt;text-align:center;margin-top:22px}
-.downloaddiv a{color:#000;padding:5px}
+/* the wordlist is one of the two things this site is for, so the link gets an
+   affordance instead of being 16pt underlined text. 2px border matches the h1 rule. */
+.downloaddiv{margin:30px 0 0;text-align:center}
+.downloaddiv a{display:inline-block;text-decoration:none;background:#fff;color:#000;
+   border:2px solid #000;padding:13px 26px 12px;min-width:340px}
+.downloaddiv a:hover{background:#000;color:#fff}
+.downloaddiv .dl-main{display:block;font:700 15px/1.2 var(--sans)}
+.downloaddiv .dl-sub{display:block;margin-top:5px;font:12px/1.2 var(--mono);color:#555}
+.downloaddiv a:hover .dl-sub{color:#bbb}
 
 /* ---------- footer: inverted transition, then the black bar ---------- */
 .footerborder{height:10px;
@@ -189,7 +196,10 @@ not-a-hex-hash</textarea></div>
       that word really hashes to, with the <span class="matched">part yours matched</span> highlighted,
       <span class="sw" style="background:#FF0000">Red:</span> Not found.</p>
 
-  <div class="downloaddiv"><a href="#">Download CrackStation's Wordlist</a></div>
+  <div class="downloaddiv"><a href="#">
+    <span class="dl-main">Download CrackStation's Wordlist</span>
+    <span class="dl-sub">1.5 billion words &middot; 15 GB &middot; torrent or HTTP</span>
+  </a></div>
 
   <h2>How CrackStation Works</h2>
   <p>CrackStation uses massive pre-computed lookup tables to crack password hashes. These tables store a mapping
