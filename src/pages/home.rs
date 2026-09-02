@@ -297,12 +297,12 @@ mod tests {
         );
         assert_eq!(
             line_containing(&html, "<b>&lt;script"),
-            format!("<b>{XSS_ESCAPED}</b>"),
+            format!("<p class=\"error\"><b>{XSS_ESCAPED}</b></p>"),
             "error message"
         );
         assert_eq!(
             line_containing(&html, "</textarea>"),
-            format!("name=\"hashes\" >{XSS_ESCAPED}</textarea>"),
+            format!("<textarea name=\"hashes\" spellcheck=\"false\">{XSS_ESCAPED}</textarea>"),
             "the submission echoed back into the textarea"
         );
     }

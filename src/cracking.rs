@@ -19,6 +19,65 @@ pub struct CrackResult {
     pub format_error: bool,
 }
 
+/// Counts for the line above the results table.
+///
+/// Derived once here rather than in the template, because Askama cannot express the
+/// arithmetic and because the classification has to agree exactly with the row the
+/// table renders for the same result -- a summary that disagrees with the rows below
+/// it is worse than no summary.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ResultSummary {
+    /// Hashes submitted, i.e. rows of input that survived parsing into a query.
+    pub hashes: usize,
+    /// Hashes with at least one exact match.
+    pub cracked: usize,
+    /// Hashes with matches, none of which is exact.
+    pub partial: usize,
+    /// Well-formed hashes with no match in any table.
+    pub not_found: usize,
+    /// Inputs that are not a hash this site can look up.
+    pub invalid: usize,
+    /// Every match found across every table, including those the per-hash cap withheld.
+    pub candidates: usize,
+}
+
+impl ResultSummary {
+    pub fn of(results: &[CrackResult]) -> Self {
+        let mut summary = Self {
+            hashes: results.len(),
+            cracked: 0,
+            partial: 0,
+            not_found: 0,
+            invalid: 0,
+            candidates: 0,
+        };
+        for result in results {
+            summary.candidates += result.total_matches;
+            if result.format_error {
+                summary.invalid += 1;
+            } else if result.matches.is_empty() {
+                summary.not_found += 1;
+            } else if result.matches.iter().any(CrackMatch::is_full_match) {
+                summary.cracked += 1;
+            } else {
+                summary.partial += 1;
+            }
+        }
+        debug_assert!(
+            summary.is_exhaustive(),
+            "every hash must land in exactly one bucket: {:?}",
+            summary
+        );
+        summary
+    }
+
+    /// Every hash falls into exactly one bucket, so the four must account for all of them.
+    /// Kept as a method rather than a comment so the tests can assert it directly.
+    pub fn is_exhaustive(&self) -> bool {
+        self.cracked + self.partial + self.not_found + self.invalid == self.hashes
+    }
+}
+
 impl CrackResult {
     /// How many matches exist that are not being shown.
     pub fn hidden_matches(&self) -> usize {
@@ -198,7 +257,11 @@ pub fn init_oracle(cracking_dir: &Path) -> PreimageOracle {
 
     for (label, idx_name, algorithm) in tables {
         let idx_path = cracking_dir.join(idx_name);
-        let dict = if label.contains("huge") { &hugelist } else { &realuniq };
+        let dict = if label.contains("huge") {
+            &hugelist
+        } else {
+            &realuniq
+        };
         oracle
             .register(label, algorithm, &idx_path, dict)
             .unwrap_or_else(|e| {
@@ -282,6 +345,140 @@ pub fn crack_hashes(oracle: &PreimageOracle, hashes: &[String]) -> Vec<CrackResu
             }
         })
         .collect()
+}
+
+#[cfg(test)]
+mod summary_tests {
+    use super::*;
+
+    fn full(hash: &str) -> CrackResult {
+        CrackResult {
+            hash: hash.to_string(),
+            matches: vec![CrackMatch {
+                plaintext: "hello".to_string(),
+                algorithm_name: "md5".to_string(),
+                near_miss: None,
+            }],
+            total_matches: 1,
+            format_error: false,
+        }
+    }
+
+    fn partial(hash: &str, total: usize) -> CrackResult {
+        CrackResult {
+            hash: hash.to_string(),
+            matches: vec![CrackMatch {
+                plaintext: "password".to_string(),
+                algorithm_name: "LM".to_string(),
+                near_miss: Some(NearMiss {
+                    matched: "e52cac67419a9a22".to_string(),
+                    rest: "4a3b108f3fa6cb6d".to_string(),
+                }),
+            }],
+            total_matches: total,
+            format_error: false,
+        }
+    }
+
+    fn not_found(hash: &str) -> CrackResult {
+        CrackResult {
+            hash: hash.to_string(),
+            matches: vec![],
+            total_matches: 0,
+            format_error: false,
+        }
+    }
+
+    fn invalid(hash: &str) -> CrackResult {
+        CrackResult {
+            hash: hash.to_string(),
+            matches: vec![],
+            total_matches: 0,
+            format_error: true,
+        }
+    }
+
+    #[test]
+    fn counts_one_of_each() {
+        let summary =
+            ResultSummary::of(&[full("a"), partial("b", 30), not_found("c"), invalid("d")]);
+        assert_eq!(
+            summary,
+            ResultSummary {
+                hashes: 4,
+                cracked: 1,
+                partial: 1,
+                not_found: 1,
+                invalid: 1,
+                candidates: 31
+            }
+        );
+        assert!(summary.is_exhaustive());
+    }
+
+    /// A hash with both an exact match and near misses counts as cracked, never partial.
+    /// The table hoists the exact match to the top of that block, so counting it as
+    /// partial would contradict the row the reader can see.
+    #[test]
+    fn an_exact_match_alongside_near_misses_counts_as_cracked() {
+        let mut result = partial("e52cac67419a9a22664345140a852f61", 30);
+        result.matches.insert(
+            0,
+            CrackMatch {
+                plaintext: "password123".to_string(),
+                algorithm_name: "LM".to_string(),
+                near_miss: None,
+            },
+        );
+        let summary = ResultSummary::of(&[result]);
+        assert_eq!(summary.cracked, 1);
+        assert_eq!(summary.partial, 0);
+        assert!(summary.is_exhaustive());
+    }
+
+    /// `candidates` counts every match found, including the ones the per-hash cap
+    /// withheld -- that is the number the truncation row is talking about.
+    #[test]
+    fn candidates_counts_withheld_matches_too() {
+        let summary = ResultSummary::of(&[partial("a", 27376), full("b")]);
+        assert_eq!(summary.candidates, 27377);
+    }
+
+    #[test]
+    fn an_empty_submission_is_all_zeroes_and_still_exhaustive() {
+        let summary = ResultSummary::of(&[]);
+        assert_eq!(
+            summary,
+            ResultSummary {
+                hashes: 0,
+                cracked: 0,
+                partial: 0,
+                not_found: 0,
+                invalid: 0,
+                candidates: 0
+            }
+        );
+        assert!(summary.is_exhaustive());
+    }
+
+    #[test]
+    fn every_bucket_is_accounted_for_on_a_mixed_batch() {
+        let results: Vec<CrackResult> = (0..7)
+            .map(|i| match i % 4 {
+                0 => full("h"),
+                1 => partial("h", 5),
+                2 => not_found("h"),
+                _ => invalid("h"),
+            })
+            .collect();
+        let summary = ResultSummary::of(&results);
+        assert_eq!(summary.hashes, 7);
+        assert!(
+            summary.is_exhaustive(),
+            "{:?} does not account for all 7",
+            summary
+        );
+    }
 }
 
 #[cfg(test)]

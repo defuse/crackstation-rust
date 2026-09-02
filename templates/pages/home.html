@@ -9,43 +9,48 @@
 
 <script src="/js/home.js"></script>
 
-<!-- Hash cracking form. -->
+<!-- Hash cracking form. Paste box left, captcha and submit together on the right:
+     keeping those two adjacent is why this is not a full-width textarea with the
+     button beneath it. -->
 <form action="/" method="post">
-<table style="width: 100%;">
-<tr>
-    <td style="width: 550px;">
-        <textarea
-            style="width: 100%; height: 180px; border: solid black 1px; background-color: #e9e9e9;"
-            name="hashes" >{{ submitted_hashes }}</textarea>
-    </td>
-    <td>
-        <center>
-            <div class="g-recaptcha" data-theme="dark" data-sitekey="{{ ctx.recaptcha_site_key }}" data-callback="onRecaptchaChecked" data-expired-callback="onRecaptchaExpired"></div>
-            <input id="submitbutton" type="submit" name="crack" value="Crack Hashes" style="width: 200px; margin-top: 10px;" disabled/>
-        </center>
-    </td>
-</tr>
-</table>
+<div class="io">
+    <div class="field">
+        <textarea name="hashes" spellcheck="false">{{ submitted_hashes }}</textarea>
+    </div>
+    <div class="side">
+        <div class="g-recaptcha" data-theme="dark" data-sitekey="{{ ctx.recaptcha_site_key }}" data-callback="onRecaptchaChecked" data-expired-callback="onRecaptchaExpired"></div>
+        <input id="submitbutton" type="submit" name="crack" value="Crack Hashes" disabled />
+    </div>
+</div>
 </form>
 
-<!-- Supported hash types. -->
-<p style="font-size: 8pt; margin: 0; padding: 0;">
+<!-- Supported hash types, directly under the input: the first thing a visitor needs
+     in order to know what to paste. -->
+<p class="supports">
 <b>Supports:</b>
 LM, NTLM, md2, md4, md5, md5(md5_hex), md5-half, sha1, sha224, sha256, sha384,
 sha512, ripeMD160, whirlpool, MySQL 4.1+ (sha1(sha1_bin)), QubesV3.1BackupDefaults
-<br />
 </p>
 
 <!-- Crack results (only shown after a POST) -->
-<div class="crackresults">
 {% if let Some(error) = error %}
-<p style="color: red;">
-    <b>{{ error }}</b>
-</p>
+<p class="error"><b>{{ error }}</b></p>
 {% endif %}
+{% endblock %}
 
+{% block wide %}
 {% if let Some(results) = results %}
+{% let summary = crate::cracking::ResultSummary::of(results) %}
+<div class="crackresults"><div>
 <table class="results">
+<caption class="summary"><div>
+    <span class="stat"><i>hashes:</i> <b>{{ summary.hashes }}</b></span>
+    <span class="stat"><i>cracked:</i> <b>{{ summary.cracked }}</b></span>
+    <span class="stat"><i>partial:</i> <b>{{ summary.partial }}</b></span>
+    <span class="stat"><i>not found:</i> <b>{{ summary.not_found }}</b></span>
+    <span class="stat"><i>invalid:</i> <b>{{ summary.invalid }}</b></span>
+    <span class="stat"><i>candidates examined:</i> <b>{{ summary.candidates }}</b></span>
+</div></caption>
 <tr><th>Hash</th><th>Type</th><th>Result</th></tr>
 {% for result in results %}
 {% if result.format_error %}
@@ -66,14 +71,24 @@ sha512, ripeMD160, whirlpool, MySQL 4.1+ (sha1(sha1_bin)), QubesV3.1BackupDefaul
 {% endif %}
 {% endfor %}
 </table>
-<p style="font-size: 8pt;"><strong>Color Codes:</strong> <span style="background-color: #00FF00;">Green:</span> Exact match, <span style="background-color: #FFFF00;">Yellow:</span> Partial match &mdash; the hash column shows what that word really hashes to, with the <span class="matched">part yours matched</span> highlighted, <span style="background-color: #FF0000;">Red:</span> Not found.</p>
+</div></div>
 {% endif %}
-</div>
+{% endblock %}
+
+{% block tail %}
+<div class="content">
+{% if self.results.is_some() %}
+<p class="legend"><strong>Color Codes:</strong> <span class="sw" style="background-color: #00FF00;">Green:</span> Exact match, <span class="sw" style="background-color: #FFFF00;">Yellow:</span> Partial match &mdash; the hash column shows what that word really hashes to, with the <span class="matched">part yours matched</span> highlighted, <span class="sw" style="background-color: #FF0000;">Red:</span> Not found.</p>
+{% endif %}
 
 <div class="downloaddiv">
-    <a class="downloadlink"
-       href="/crackstation-wordlist-password-cracking-dictionary.htm">
-            Download CrackStation's Wordlist
+    <a href="/crackstation-wordlist-password-cracking-dictionary.htm">
+        <span class="dl-main">Download CrackStation's Wordlist</span>
+        <span class="dl-sub">1,493,677,782 words &middot; 15 GB &middot; torrent or HTTP</span>
+    </a>
+    <a href="https://github.com/defuse/preimage">
+        <span class="dl-main">Command-Line Tool for Local Index Generation &amp; Lookup</span>
+        <span class="dl-sub">$ cargo install preimage</span>
     </a>
 </div>
 
@@ -104,6 +119,9 @@ them much more effective. For MD5 and SHA1 hashes, we have a 190GB,
 You can download CrackStation's dictionaries <a
 href="/crackstation-wordlist-password-cracking-dictionary.htm">here</a>, and
 the lookup table implementation (PHP and C) is available <a
-href="https://github.com/defuse/crackstation-hashdb">here</a>.
+href="https://github.com/defuse/crackstation-hashdb">here</a>, and a modern Rust
+implementation that can be used as either a library or a command-line tool <a
+href="https://github.com/defuse/preimage">here</a>.
 </p>
+</div>
 {% endblock %}
