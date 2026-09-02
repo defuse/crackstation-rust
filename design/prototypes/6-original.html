@@ -27,11 +27,11 @@ a:hover{color:#F00}
       border-top:1px solid #fff;border-bottom:1px solid #fff;font:14px/30px var(--mono)}
 .nav-inner{display:flex;align-items:center;min-height:30px;padding:0 25px;flex-wrap:wrap}
 .nav ul{display:flex;list-style:none;margin:0;padding:0;align-items:center;width:100%}
-.nav li{display:flex}
-.nav li+li{border-left:1px solid #3d3d3d}
+.nav li{display:flex;position:relative}
+.nav li+li::before{content:"";position:absolute;left:0;top:12.5%;height:75%;width:1px;background:#8a8a8a}
 .nav a{font:14px/30px var(--mono);color:#fff;text-decoration:none;padding:0 16px;white-space:nowrap}
 .nav li:first-child a{padding-left:0}
-.nav a:hover,.nav a[aria-current]{color:#FFAAAA}
+.nav a:hover{color:#FFAAAA}
 .nav .ext{margin-left:auto;display:flex;align-items:center;gap:16px;padding-left:16px}
 .nav .ext a{font-size:13px;color:#ccc;padding-right:0;display:flex;align-items:center;gap:5px}
 .nav .ext a:hover{color:#FFAAAA}
@@ -41,7 +41,7 @@ a:hover{color:#F00}
   .nav ul{display:none;flex-direction:column;align-items:stretch;padding-bottom:4px}
   .nav ul li{border-top:1px solid #333}
   .nav a{display:block;padding:11px 0;font-size:14px;line-height:1}
-  .nav li+li{border-left:0}
+  .nav li+li::before{display:none}
   .nav li:first-child a{padding-left:0}
   .nav .ext{margin-left:0;padding-top:8px}
   .burger{display:block;font:14px/1 var(--mono);color:#fff;background:transparent;border:0;
@@ -121,9 +121,9 @@ footer a:hover{color:#F00}
 <nav class="nav"><div class="nav-inner">
   <input type="checkbox" id="navtoggle"><label class="burger" for="navtoggle">&#9776; Menu</label>
   <ul>
-    <li><a href="#" aria-current="page">Free Hash Cracker</a></li>
-    <li><a href="#">Wordlist Download</a></li>
+    <li><a href="#" aria-current="page">Hash Cracker</a></li>
     <li><a href="#">Password Hashing Security</a></li>
+    <li><a href="#">Wordlist Download</a></li>
     <li class="ext">
       <a href="https://defuse.ca/">Defuse.ca</a>
       <a href="https://twitter.com/defusesec"><img src="../../static/images/twitter.png" alt="">Twitter</a>
