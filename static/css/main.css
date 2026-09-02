@@ -324,8 +324,9 @@ footer a:hover { color: #F00; }
 .shortcuts td a { font-weight: normal; text-decoration: none; color: #000; }
 .shortcuts td a:visited { color: #000; }
 .shortcuts td:hover { background-color: #DDDDDD; }
-#rnglist { margin: 0 auto; }
-#rnglist td { border: solid 1px #AAAAAA; padding: 10px; }
+/* the two per-platform tables: CSPRNGs, and password hashing libraries */
+#rnglist, .langtable { margin: 0 auto; }
+#rnglist td, .langtable td { border: solid 1px #AAAAAA; padding: 10px; }
 .passcrack {
     padding: 10px;
     font-family: var(--data);

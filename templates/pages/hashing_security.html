@@ -471,6 +471,37 @@ interoperability problems wacky hashes create. It's clearly best to use a
 standard and well-tested algorithm.
 </p>
 
+<h2>The <span style="color: red;">WRONG</span> Way: Not Using Slow, Memory-Hard Hash Functions</h2>
+
+<p>
+The most common mistake is to salt a fast hash and stop there. The salt does its job:
+lookup tables and rainbow tables no longer work, and every hash has to be attacked on
+its own. But attacking one hash on its own is cheap when the hash is fast. A single
+graphics card computes billions of SHA-256 hashes per second, and the attacker only
+has to try the passwords people actually pick. Salt does nothing to slow that down.
+</p>
+
+<p>
+It is not enough for the hash to be slow on your server. The attacker won't run your
+code on your CPU, they'll run a hand-optimized version on a few thousand GPU cores, or
+on an FPGA, or on hardware built for nothing else. A function that is slow only because
+it does a lot of arithmetic plays to their strengths. PBKDF2 is the clearest case: it
+needs almost no memory, so thousands of copies of it fit on one card.
+</p>
+
+<p>
+A memory-hard function is designed so that each guess needs a large block of memory,
+and so that the attacker can't trade that memory back for extra computation. That makes
+them buy memory and memory bandwidth per guess instead of just arithmetic units. bcrypt
+needs about 4KB, which is why it held up against GPUs better than PBKDF2 did. Argon2
+lets you ask for tens or hundreds of megabytes.
+</p>
+
+<p>
+Setting the cost too low is the same mistake in a smaller form. See <a
+href="#slowhashing">Making Password Cracking Harder</a> for what to set it to.
+</p>
+
 <a name="properhashing"></a>
 <h2>The <span style="color: green;">RIGHT</span> Way: How to Hash Properly</h2>
 
@@ -480,6 +511,26 @@ subsection covers the basics&mdash;everything that is absolutely necessary. The
 following subsections explain how the basics can be augmented to make the hashes
 even harder to crack.
 </p>
+
+<p>
+Use a library, and where your language has Argon2 built in, use that. Do not write
+this yourself.
+</p>
+
+<table class="langtable">
+    <tr><th>Platform</th><th>Password hashing library</th></tr>
+    <tr><td>PHP</td><td><a href="https://www.php.net/manual/en/function.password-hash.php">password_hash</a> with <span class="ic">PASSWORD_ARGON2ID</span>, built in since 7.3</td></tr>
+    <tr><td>Python</td><td><a href="https://pypi.org/project/argon2-cffi/">argon2-cffi</a></td></tr>
+    <tr><td>Ruby</td><td><a href="https://rubygems.org/gems/argon2">argon2</a></td></tr>
+    <tr><td>Go</td><td><a href="https://pkg.go.dev/golang.org/x/crypto/argon2">golang.org/x/crypto/argon2</a></td></tr>
+    <tr><td>Rust</td><td><a href="https://docs.rs/argon2">argon2</a></td></tr>
+    <tr><td>Node.js</td><td><a href="https://www.npmjs.com/package/argon2">argon2</a></td></tr>
+    <tr><td>Java</td><td><a href="https://www.bouncycastle.org/">Bouncy Castle</a> Argon2BytesGenerator, or Spring Security's Argon2PasswordEncoder</td></tr>
+    <tr><td>Dot NET (C#, VB)</td><td><a href="https://www.nuget.org/packages/Konscious.Security.Cryptography.Argon2">Konscious.Security.Cryptography.Argon2</a></td></tr>
+    <tr><td>Perl</td><td><a href="https://metacpan.org/pod/Crypt::Argon2">Crypt::Argon2</a></td></tr>
+    <tr><td>C/C++</td><td><a href="https://doc.libsodium.org/password_hashing">libsodium</a>, or the <a href="https://github.com/P-H-C/phc-winner-argon2">reference implementation</a></td></tr>
+    <tr><td>Anything else</td><td>A binding to <a href="https://doc.libsodium.org/password_hashing">libsodium</a></td></tr>
+</table>
 
 <h3>The Basics: Hashing with Salt</h3>
 
