@@ -1,13 +1,10 @@
-<!doctype html>
+TPL = r'''<!doctype html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>CrackStation — prototype 3, results first</title>
+<title>CrackStation — prototype __N__, __NAME__</title>
 <style>
 :root{
-  --bg:#0b0b0e; --panel:#141419; --ink:#e9e9ee; --ink-dim:#83838f;
-  --rule:#26262e; --rule-strong:#3a3a45; --accent:#7aa2ff; --grid:#111114;
-  --gutter-ink:#4a4a56; --strip-bg:#1b1b22; --field:#0e0e12;
-  --thbg:#1b1b22; --think:#c9c9d2; --footbg:#101014;
+__PALETTE__
   --suc:#00FF00; --part:#FFFF00; --fail:#FF0000; --more:#DDDDDD;
   --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,"DejaVu Sans Mono",monospace;
   --sans:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
@@ -50,10 +47,10 @@ main{flex:1;padding:32px 0 56px}
 h1{font:600 15px/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--ink-dim);margin:0 0 12px}
 .panel{background:var(--panel);border:1px solid var(--rule-strong)}
 .io{display:flex;font-family:var(--mono)}
-
+__GUTTERCSS__
 .field{flex:1;min-width:0}
 textarea{width:100%;border:0;background:var(--field);color:var(--ink);resize:vertical;
-         font:14px/1.7 var(--mono);padding:14px 16px;display:block;min-height:150px;outline:0}
+         font:__TASIZE__/1.7 var(--mono);padding:14px 16px;display:block;min-height:__TAMIN__;outline:0}
 .controls{display:flex;align-items:center;gap:16px;padding:12px 16px;border-top:1px solid var(--rule);flex-wrap:wrap}
 .captcha{width:302px;height:76px;border:1px solid var(--rule);background:var(--field);display:flex;
          align-items:center;justify-content:center;color:var(--gutter-ink);font:12px/1 var(--mono);letter-spacing:.08em}
@@ -69,12 +66,12 @@ button:hover{background:var(--accent);color:#06060a}
 .strip b{color:var(--ink);font-weight:600}
 
 /* ---------- results: sized by content, never wrapped, never clipped ---------- */
-.results-region{margin-top:18px}
-table.results{border-collapse:collapse;font:15px/1.45 var(--mono);width:auto}
+.results-region{margin-top:__RTOP__}
+table.results{border-collapse:collapse;font:__RSIZE__/1.45 var(--mono);width:auto}
 table.results th{font:600 11px/1 var(--mono);letter-spacing:.11em;text-transform:uppercase;text-align:left;
                  padding:8px 9px;white-space:nowrap;border:1px solid var(--grid);
                  background:var(--thbg);color:var(--think)}
-table.results td{padding:9px 9px;border:1px solid var(--grid);color:#000;white-space:nowrap}
+table.results td{padding:__RPAD__ 9px;border:1px solid var(--grid);color:#000;white-space:nowrap}
 tr.suc{background:var(--suc)} tr.part{background:var(--part)}
 tr.fail{background:var(--fail)} tr.more{background:var(--more);font-style:italic}
 .matched{background:var(--suc);outline:1px solid rgba(0,0,0,.35)}
@@ -126,7 +123,7 @@ footer a:hover{color:var(--ink)}
 
   <div class="panel">
     <div class="io">
-
+__GUTTERHTML__
       <div class="field"><textarea spellcheck="false">5d41402abc4b2a76b9719d911017c592
 aaf4c61ddcc5e8a2dabede0f3b482cd9aea9434d
 e52cac67419a9a220000000000000000
@@ -144,7 +141,7 @@ not-a-hex-hash</textarea></div>
      sha256, sha384, sha512, ripeMD160, whirlpool, MySQL 4.1+ (sha1(sha1_bin)), QubesV3.1BackupDefaults</p>
 
   <div class="results-region">
-
+__STRIP__
     <table class="results">
       <tr><th>Hash</th><th>Type</th><th>Result</th></tr>
       <tr class="suc"><td>5d41402abc4b2a76b9719d911017c592</td><td>md5</td><td>hello</td></tr>
@@ -184,5 +181,44 @@ not-a-hex-hash</textarea></div>
   </span>
 </div></footer>
 
-<div class="tag">3 &middot; RESULTS FIRST</div>
+<div class="tag">__N__ &middot; __TAG__</div>
 </body></html>
+'''
+
+LIGHT = """  --bg:#f4f4f2; --panel:#ffffff; --ink:#111114; --ink-dim:#5c5c66;
+  --rule:#d6d6d2; --rule-strong:#111114; --accent:#1a4fd6; --grid:#111114;
+  --gutter-ink:#a8a8a4; --strip-bg:#ebebe8; --field:#fbfbfa;
+  --thbg:#111114; --think:#ffffff; --footbg:#ebebe8;"""
+DARK = """  --bg:#0b0b0e; --panel:#141419; --ink:#e9e9ee; --ink-dim:#83838f;
+  --rule:#26262e; --rule-strong:#3a3a45; --accent:#7aa2ff; --grid:#111114;
+  --gutter-ink:#4a4a56; --strip-bg:#1b1b22; --field:#0e0e12;
+  --thbg:#1b1b22; --think:#c9c9d2; --footbg:#101014;"""
+
+GUTTER_CSS = """.gutter{flex:0 0 44px;padding:14px 0;text-align:right;color:var(--gutter-ink);
+        font:__TASIZE__/1.7 var(--mono);background:var(--field);
+        border-right:1px solid var(--rule);user-select:none}
+.gutter span{display:block;padding-right:10px}"""
+GUTTER_HTML = """      <div class="gutter"><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span></div>"""
+
+STRIP = """    <div class="strip">
+      <span><b>6</b> hashes</span><span><b>3</b> cracked</span><span><b>1</b> partial</span>
+      <span><b>1</b> not found</span><span><b>1</b> unreadable</span><span><b>27,376</b> candidates examined</span>
+    </div>
+"""
+
+VARIANTS = [
+    ("1-light.html",         "1", "light instrument", "LIGHT",         LIGHT, True,  True,  "15px", "210px", "13px", "7px",  "18px"),
+    ("2-dark.html",          "2", "dark console",     "DARK CONSOLE",  DARK,  True,  True,  "15px", "210px", "13px", "7px",  "18px"),
+    ("3-results-first.html", "3", "results first",    "RESULTS FIRST", DARK,  False, False, "14px", "150px", "15px", "9px",  "18px"),
+]
+
+for fn, n, name, tag, pal, gutter, strip, tasize, tamin, rsize, rpad, rtop in VARIANTS:
+    s = TPL
+    s = s.replace("__PALETTE__", pal).replace("__N__", n).replace("__NAME__", name).replace("__TAG__", tag)
+    s = s.replace("__GUTTERCSS__", GUTTER_CSS if gutter else "")
+    s = s.replace("__GUTTERHTML__", GUTTER_HTML if gutter else "")
+    s = s.replace("__STRIP__", STRIP if strip else "")
+    s = s.replace("__TASIZE__", tasize).replace("__TAMIN__", tamin)
+    s = s.replace("__RSIZE__", rsize).replace("__RPAD__", rpad).replace("__RTOP__", rtop)
+    open(fn, "w").write(s)
+    print("wrote", fn)
