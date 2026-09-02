@@ -722,9 +722,9 @@ A great resource for learning about web application vulnerabilities is
 Security Project (OWASP)</a>. A good introduction is the 
 <a href="https://owasp.org/www-project-top-ten/">OWASP Top Ten Vulnerability List</a>.
 Unless you understand all the vulnerabilities on the list, do not attempt to
-write a web application that deals with sensitive data. It is the employer's
+write a web application that deals with sensitive data. It is an employer's
 responsibility to ensure all developers are adequately trained in secure
-application development.
+application development and are not rushed into implementing insecure software.
 </p>
 
 <p>
@@ -759,12 +759,13 @@ that breaches are detected and responded to promptly.
     winner of the Password Hashing Competition, specified in
     <a href="https://www.rfc-editor.org/rfc/rfc9106.html">RFC 9106</a>, and the
     first choice today.</li>
-    <li><a href="https://en.wikipedia.org/wiki/Bcrypt">bcrypt</a> or
-    <a href="https://www.tarsnap.com/scrypt.html">scrypt</a>, where Argon2 is not
+    <li><a href="https://www.tarsnap.com/scrypt.html">scrypt</a> or
+    <a href="https://en.wikipedia.org/wiki/Bcrypt">bcrypt</a>, where Argon2 is not
     available.</li>
-    <li><a href="https://en.wikipedia.org/wiki/PBKDF2">PBKDF2</a>, where a
-    standards requirement calls for it specifically.</li>
-    <li>Whatever your platform provides on top of these &mdash; PHP's
+    <li><a href="https://en.wikipedia.org/wiki/PBKDF2">PBKDF2</a>, only where a
+    standards requirement calls for it specifically, or nothing better is
+    available.</li>
+    <li>Whatever library your platform has that provides one of these &mdash; PHP's
     <span class="ic">password_hash()</span>,
     <a href="https://doc.libsodium.org/password_hashing">libsodium</a>, or
     secure versions of <a href="https://en.wikipedia.org/wiki/Crypt_(Unix)#Library_Function_crypt.283.29">crypt</a> ($2y$, $5$, $6$).</li>
