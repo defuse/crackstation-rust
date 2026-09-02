@@ -320,16 +320,15 @@ different salt, the reverse lookup table attack won't work either.
     The idea is to make the hash function very slow, so that even with a fast
     GPU or custom hardware, dictionary and brute-force attacks are too slow to
     be worthwhile. The goal is to make the hash function slow enough to impede
-    attacks, but still fast enough to not cause a noticeable delay for the user.
+    attacks, but still fast enough to not cause a noticeable delay for the user when they log in.
 </p>
 
 <p>
-    Key stretching is implemented using a special type of CPU-intensive hash
-    function. Don't try to invent your own&ndash;simply iteratively hashing the
-    hash of the password isn't enough as it can be parallelized in hardware and
-    executed as fast as a normal hash. Use a standard algorithm like <a
-    href="https://en.wikipedia.org/wiki/PBKDF2">PBKDF2</a> or <a href="https://en.wikipedia.org/wiki/Bcrypt">bcrypt</a>.
-    You can find a PHP implementation of <a href="https://defuse.ca/php-pbkdf2.htm">PBKDF2 here</a>.
+    Key stretching is implemented using a special type of
+    CPU-and-memory-intensive hash function. Don't try to invent your
+    own&ndash;simply iteratively hashing the hash of the password isn't enough
+    as it can be parallelized in hardware and executed as fast as a normal hash.
+    Use a standard algorithm like Argon2, scrypt, or bcrypt.
 </p>
 
 <p>
@@ -358,28 +357,17 @@ different salt, the reverse lookup table attack won't work either.
 </ul>
 
 <p>
-    Those are floors, not targets. Measure on your own hardware and raise them
+    Measure on your own hardware and raise the hardness parameters
     until a single hash takes as long as you can afford &mdash; a few hundred
     milliseconds is typical for a login form. The denial of service threat can
     be reduced by rate limiting authentication attempts per account and per
-    source address. Always design your system so that the cost parameters can be
+    IP address. Always design your system so that the cost parameters can be
     increased later, and so that stored hashes record the parameters they were
     made with.
 </p>
 
 <p>
-    Do not move the key stretching into the user's browser to save server time.
-    The browser has no secret to salt with &mdash; the only value it reliably
-    knows is the username, and a username is public, guessable, and shared
-    across sites, which is exactly the salt this article tells you not to use.
-    Whatever the client computes also becomes, in effect, the password: anyone
-    who captures it can replay it without ever knowing the real one. If you
-    cannot afford the cost on your own servers, lower it deliberately and rate
-    limit, rather than moving the work somewhere you cannot trust the inputs.
-</p>
-
-<p>
-In the next section, we'll look at how salt is commonly implemented incorrectly.
+Using salt and a memory-hard hash function, your users' passwords will be as protected as they possibly can be. In the next sections, we'll look at how password hashing is commonly implemented incorrectly.
 </p>
 
 <a name="ineffective"></a>
@@ -427,9 +415,8 @@ usernames and use them to crack username-salted hashes.
 
 <p>
 To make it impossible for an attacker to create a lookup table for every
-possible salt, the salt must be long. A good rule of thumb is to use a salt that
-is the same size as the output of the hash function. For example, the output of
-SHA256 is 256 bits (32 bytes), so the salt should be at least 32 random bytes.
+possible salt, the salt must be long. Ideally, salts should be 32 random bytes,
+or at the very least, 16 random bytes.
 </p>
 
 <h2>The <span style="color: red;">WRONG</span> Way: Double Hashing &amp; Wacky Hash Functions</h2>
@@ -442,8 +429,7 @@ practice, though, there is very little benefit to doing it. All it does is
 create interoperability problems, and can sometimes even make the hashes less
 secure.  Never try to invent your own crypto, always use a standard that has
 been designed by experts. Some will argue that using multiple hash functions
-makes the process of computing the hash slower, so cracking is slower, but
-there's a better way to make the cracking process slower as we'll see later.
+makes the process of computing the hash slower, so cracking is slower, but using a standard memory-hard function like Argon2 is a much better way to achieve this.
 </p>
 
 <p>Here are some examples of poor wacky hash functions I've seen suggested in forums on the internet.</p>
@@ -475,42 +461,14 @@ principle</a>, that the attacker will usually have access to the source code
 (especially if it's free or open source software), and that given a few
 password-hash pairs from the target system, it is not difficult to reverse
 engineer the algorithm. It does take longer to compute wacky hash functions, but
-only by a small constant factor. It's better to use an iterated algorithm that's
-designed to be extremely hard to parallelize (these are discussed below). And,
-properly salting the hash solves the rainbow table problem.
+only by a small constant factor. It's better to use a purpose-built standard slow hashing function like Argon2 than it is to design your own, since Argon2 has been well-analyzed for "shortcuts" an attacker could use to speed it up.
 </p>
 
 <p>
-If you really want to use a standardized &quot;wacky&quot; hash function like HMAC, then it's OK.
-But if your reason for doing so is to make the hash computation slower, read the section above about key stretching first.
-</p>
-
-<p>
-Compare these minor benefits to the risks of accidentally implementing a
-completely insecure hash function and the interoperability problems wacky hashes
-create. It's clearly best to use a standard and well-tested algorithm.
-</p>
-
-<h2>Hash Collisions</h2>
-
-<p>
-Because hash functions map arbitrary amounts of data to fixed-length strings,
-there must be some inputs that hash into the same string. Cryptographic hash
-functions are designed to make these collisions incredibly difficult to find.
-From time to time, cryptographers find "attacks" on hash functions that make
-finding collisions easier. A recent example is the MD5 hash function, for which
-collisions have actually been found.
-</p>
-
-<p>
-Collision attacks are a sign that it may be more likely for a string other than
-the user's password to have the same hash. However, finding collisions in even a
-weak hash function like MD5 requires a lot of dedicated computing power, so it
-is very unlikely that these collisions will happen "by accident" in practice. A
-password hashed using MD5 and salt is, for all practical purposes, just as
-secure as if it were hashed with SHA256 and salt. Nevertheless, it is a good
-idea to use a more secure hash function like SHA256, SHA512, RipeMD, or
-WHIRLPOOL if possible.
+Compare the minor benefits of using a wacky hash function to the risks of
+accidentally implementing a completely insecure hash function and the
+interoperability problems wacky hashes create. It's clearly best to use a
+standard and well-tested algorithm.
 </p>
 
 <a name="properhashing"></a>
