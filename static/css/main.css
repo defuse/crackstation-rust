@@ -239,13 +239,16 @@ caption.summary > div {
 .downloaddiv {
     margin: 30px 0 0;
     display: flex;
-    flex-direction: column;
-    align-items: center;
+    flex-wrap: wrap;
+    justify-content: center;
     gap: 20px;
 }
 .downloaddiv a {
-    /* both links take the width of the wider, so a stack of them lines up */
-    width: min(100%, 480px);
+    /* Side by side, sharing the row equally, wrapping to a column when the window is
+       too narrow. Default align-items: stretch keeps them the same height even when
+       one label wraps to two lines and the other does not. */
+    flex: 1 1 300px;
+    max-width: 480px;
     text-align: center;
     text-decoration: none;
     background: #fff;
