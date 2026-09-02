@@ -27,9 +27,12 @@ a:hover{color:#F00}
       border-top:1px solid #fff;border-bottom:1px solid #fff;font:14px/30px var(--mono)}
 .nav-inner{display:flex;align-items:center;min-height:30px;padding:0 25px;flex-wrap:wrap}
 .nav ul{display:flex;list-style:none;margin:0;padding:0;align-items:center;width:100%}
-.nav a{font:14px/30px var(--mono);color:#fff;text-decoration:none;padding:0 18px 0 0;white-space:nowrap}
+.nav li{display:flex}
+.nav li+li{border-left:1px solid #3d3d3d}
+.nav a{font:14px/30px var(--mono);color:#fff;text-decoration:none;padding:0 16px;white-space:nowrap}
+.nav li:first-child a{padding-left:0}
 .nav a:hover,.nav a[aria-current]{color:#FFAAAA}
-.nav .ext{margin-left:auto;display:flex;align-items:center;gap:16px}
+.nav .ext{margin-left:auto;display:flex;align-items:center;gap:16px;padding-left:16px}
 .nav .ext a{font-size:13px;color:#ccc;padding-right:0;display:flex;align-items:center;gap:5px}
 .nav .ext a:hover{color:#FFAAAA}
 .nav .ext img{height:14px;width:auto;vertical-align:middle}
@@ -38,6 +41,8 @@ a:hover{color:#F00}
   .nav ul{display:none;flex-direction:column;align-items:stretch;padding-bottom:4px}
   .nav ul li{border-top:1px solid #333}
   .nav a{display:block;padding:11px 0;font-size:14px;line-height:1}
+  .nav li+li{border-left:0}
+  .nav li:first-child a{padding-left:0}
   .nav .ext{margin-left:0;padding-top:8px}
   .burger{display:block;font:14px/1 var(--mono);color:#fff;background:transparent;border:0;
           padding:7px 0;cursor:pointer}
@@ -67,13 +72,19 @@ button{width:200px;padding:9px 0;font:10pt var(--sans);cursor:pointer}
 .supports{font-size:8pt;margin:8px 0 0;padding:0}
 
 /* ---------- status strip ---------- */
-caption.strip{caption-side:top;text-align:left;display:flex;flex-wrap:wrap;gap:0 18px;
-       padding:7px 9px;background:#f0f0f0;border:solid #000 1px;border-bottom:0;
+/* the caption box takes the table's width; the flex row goes inside it, because
+   setting display:flex on the caption itself drops it out of table layout */
+caption.strip{caption-side:top;text-align:left}
+caption.strip>div{display:flex;flex-wrap:wrap;gap:0 18px;padding:7px 9px;
+       background:#f0f0f0;border:solid #000 1px;border-bottom:0;
        font:13px/1.5 var(--mono);color:#333}
 caption.strip b{color:#000;font-weight:700}
 
 /* ---------- results: the current table, minimally repaired ---------- */
-.crackresults{margin-top:10px}
+/* centred on the viewport, not on the text column. `safe` keeps the left edge
+   reachable: it centres while the table fits and falls back to left-aligned once it
+   is wider than the window, so the overflow goes right and the page scrolls. */
+.crackresults{margin-top:10px;display:flex;justify-content:safe center;padding:0 20px}
 table.results{border-collapse:collapse;width:auto;font:13px/1.45 var(--data)}
 table.results th{background:#000;color:#fff;font:700 13px/1.45 var(--mono);text-align:left;
                  padding:6px 9px;white-space:nowrap;border:solid #000 1px}
@@ -144,12 +155,15 @@ not-a-hex-hash</textarea></div>
   <p class="supports"><b>Supports:</b> LM, NTLM, md2, md4, md5, md5(md5_hex), md5-half, sha1, sha224,
      sha256, sha384, sha512, ripeMD160, whirlpool, MySQL 4.1+ (sha1(sha1_bin)), QubesV3.1BackupDefaults</p>
 
-  <div class="crackresults">
+</div>
+
+<div class="crackresults">
+  <div>
     <table class="results">
-      <caption class="strip">
+      <caption class="strip"><div>
         <span><b>6</b> hashes</span><span><b>3</b> cracked</span><span><b>1</b> partial</span>
         <span><b>1</b> not found</span><span><b>1</b> unreadable</span><span><b>27,376</b> candidates examined</span>
-      </caption>
+      </div></caption>
       <tr><th>Hash</th><th>Type</th><th>Result</th></tr>
       <tr class="suc"><td>5d41402abc4b2a76b9719d911017c592</td><td>md5</td><td>hello</td></tr>
       <tr class="suc"><td>aaf4c61ddcc5e8a2dabede0f3b482cd9aea9434d</td><td>sha1</td><td>hello</td></tr>
@@ -160,11 +174,14 @@ not-a-hex-hash</textarea></div>
       <tr class="fail"><td>not-a-hex-hash</td><td>Unknown</td><td>Unrecognized hash format.</td></tr>
     </table>
 
-    <p class="legend"><b>Color Codes:</b> <span class="sw" style="background:#00FF00">Green:</span> Exact match,
+  </div>
+</div>
+
+<div class="content">
+  <p class="legend"><b>Color Codes:</b> <span class="sw" style="background:#00FF00">Green:</span> Exact match,
       <span class="sw" style="background:#FFFF00">Yellow:</span> Partial match &mdash; the hash column shows what
       that word really hashes to, with the <span class="matched">part yours matched</span> highlighted,
       <span class="sw" style="background:#FF0000">Red:</span> Not found.</p>
-  </div>
 
   <div class="downloaddiv"><a href="#">Download CrackStation's Wordlist</a></div>
 
