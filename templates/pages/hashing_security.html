@@ -57,9 +57,12 @@ reasons <em>why</em> passwords should be stored a certain way.
     <td><a href="#salt" class="sca" title="Adding salt to render hash cracking attacks less effective">3. Adding Salt</a></td>
 </tr>
 <tr>
-    <td><a href="#ineffective" class="sca" title="The wrong way to do password hashing">4. Ineffective Hashing Methods</a></td>
-    <td><a href="#properhashing" class="sca" title="The right way to do password hashing, with salt">5. How to hash properly</a></td>
-    <td><a href="#faq" class="sca" title="Frequently asked questions about password hashing and salt">6. Frequently Asked Questions</a></td>
+    <td><a href="#slowhashing" class="sca" title="Key stretching: making each guess expensive enough that guessing does not pay">4. Slow Hash Functions</a></td>
+    <td><a href="#ineffective" class="sca" title="The wrong way to do password hashing">5. Ineffective Hashing Methods</a></td>
+    <td><a href="#properhashing" class="sca" title="The right way to do password hashing, with salt">6. How to hash properly</a></td>
+</tr>
+<tr>
+    <td colspan="3"><a href="#faq" class="sca" title="Frequently asked questions about password hashing and salt">7. Frequently Asked Questions</a></td>
 </tr>
 </tbody></table>
 
@@ -300,6 +303,81 @@ a lookup table or rainbow table. If each user's password is hashed with a
 different salt, the reverse lookup table attack won't work either. 
 </p>
 
+<a name="slowhashing"></a>
+<h2>Making Password Cracking Harder: Slow Hash Functions</h2>
+
+<p>
+    Salt ensures that attackers can't use specialized attacks like lookup tables
+    and rainbow tables to crack large collections of hashes quickly, but it
+    doesn't prevent them from running dictionary or brute-force attacks on each
+    hash individually. High-end graphics cards (GPUs) and custom hardware can
+    compute billions of hashes per second, so these attacks are still very
+    effective. To make these attacks less effective, we can use a technique
+    known as <b>key stretching</b>.
+</p>
+
+<p>
+    The idea is to make the hash function very slow, so that even with a fast
+    GPU or custom hardware, dictionary and brute-force attacks are too slow to
+    be worthwhile. The goal is to make the hash function slow enough to impede
+    attacks, but still fast enough to not cause a noticeable delay for the user.
+</p>
+
+<p>
+    Key stretching is implemented using a special type of CPU-intensive hash
+    function. Don't try to invent your own&ndash;simply iteratively hashing the
+    hash of the password isn't enough as it can be parallelized in hardware and
+    executed as fast as a normal hash. Use a standard algorithm like <a
+    href="https://en.wikipedia.org/wiki/PBKDF2">PBKDF2</a> or <a href="https://en.wikipedia.org/wiki/Bcrypt">bcrypt</a>.
+    You can find a PHP implementation of <a href="https://defuse.ca/php-pbkdf2.htm">PBKDF2 here</a>.
+</p>
+
+<p>
+    These algorithms take a security factor or iteration count as an argument.
+    This value determines how slow the hash function will be. For desktop
+    software or smartphone apps, the best way to choose this parameter is to run
+    a short benchmark on the device to find the value that makes the hash take
+    about half a second. This way, your program can be as secure as possible
+    without affecting the user experience.
+</p>
+
+<p>
+    If you use a key stretching hash in a web application, be aware that you
+    will need extra computational resources to process large volumes of
+    authentication requests, and that key stretching may make it easier to run a
+    Denial of Service (DoS) attack on your website. Use key stretching anyway,
+    and start from a concrete cost rather than guessing:
+</p>
+
+<ul>
+    <li><b>Argon2id</b> &mdash; at least 19 MiB of memory, 2 iterations, and 1
+    degree of parallelism.</li>
+    <li><b>bcrypt</b> &mdash; a cost factor of 10 or more.</li>
+    <li><b>scrypt</b> &mdash; at least N=2^17, r=8, p=1.</li>
+    <li><b>PBKDF2-HMAC-SHA256</b> &mdash; at least 600,000 iterations.</li>
+</ul>
+
+<p>
+    Those are floors, not targets. Measure on your own hardware and raise them
+    until a single hash takes as long as you can afford &mdash; a few hundred
+    milliseconds is typical for a login form. The denial of service threat can
+    be reduced by rate limiting authentication attempts per account and per
+    source address. Always design your system so that the cost parameters can be
+    increased later, and so that stored hashes record the parameters they were
+    made with.
+</p>
+
+<p>
+    Do not move the key stretching into the user's browser to save server time.
+    The browser has no secret to salt with &mdash; the only value it reliably
+    knows is the username, and a username is public, guessable, and shared
+    across sites, which is exactly the salt this article tells you not to use.
+    Whatever the client computes also becomes, in effect, the password: anyone
+    who captures it can replay it without ever knowing the real one. If you
+    cannot afford the cost on your own servers, lower it deliberately and rate
+    limit, rather than moving the work somewhere you cannot trust the inputs.
+</p>
+
 <p>
 In the next section, we'll look at how salt is commonly implemented incorrectly.
 </p>
@@ -404,7 +482,7 @@ properly salting the hash solves the rainbow table problem.
 
 <p>
 If you really want to use a standardized &quot;wacky&quot; hash function like HMAC, then it's OK.
-But if your reason for doing so is to make the hash computation slower, read the section below about key stretching first.
+But if your reason for doing so is to make the hash computation slower, read the section above about key stretching first.
 </p>
 
 <p>
@@ -448,8 +526,8 @@ even harder to crack.
 <h3>The Basics: Hashing with Salt</h3>
 
 <p>
-<b>Warning: Do not just read this section. You absolutely must implement the
-stuff in the next section: "Making Password Cracking Harder: Slow Hash
+<b>Warning: Do not just read this section. You absolutely must also implement the
+key stretching described above in "Making Password Cracking Harder: Slow Hash
 Functions".</b>
 </p>
 
@@ -578,80 +656,6 @@ certainly a good idea, but consider the following points for your implementation
         </p>
     </li>
 </ul>
-
-<h3>Making Password Cracking Harder: Slow Hash Functions</h3>
-
-<p>
-    Salt ensures that attackers can't use specialized attacks like lookup tables
-    and rainbow tables to crack large collections of hashes quickly, but it
-    doesn't prevent them from running dictionary or brute-force attacks on each
-    hash individually. High-end graphics cards (GPUs) and custom hardware can
-    compute billions of hashes per second, so these attacks are still very
-    effective. To make these attacks less effective, we can use a technique
-    known as <b>key stretching</b>.
-</p>
-
-<p>
-    The idea is to make the hash function very slow, so that even with a fast
-    GPU or custom hardware, dictionary and brute-force attacks are too slow to
-    be worthwhile. The goal is to make the hash function slow enough to impede
-    attacks, but still fast enough to not cause a noticeable delay for the user.
-</p>
-
-<p>
-    Key stretching is implemented using a special type of CPU-intensive hash
-    function. Don't try to invent your own&ndash;simply iteratively hashing the
-    hash of the password isn't enough as it can be parallelized in hardware and
-    executed as fast as a normal hash. Use a standard algorithm like <a
-    href="https://en.wikipedia.org/wiki/PBKDF2">PBKDF2</a> or <a href="https://en.wikipedia.org/wiki/Bcrypt">bcrypt</a>.
-    You can find a PHP implementation of <a href="https://defuse.ca/php-pbkdf2.htm">PBKDF2 here</a>.
-</p>
-
-<p>
-    These algorithms take a security factor or iteration count as an argument.
-    This value determines how slow the hash function will be. For desktop
-    software or smartphone apps, the best way to choose this parameter is to run
-    a short benchmark on the device to find the value that makes the hash take
-    about half a second. This way, your program can be as secure as possible
-    without affecting the user experience.
-</p>
-
-<p>
-    If you use a key stretching hash in a web application, be aware that you
-    will need extra computational resources to process large volumes of
-    authentication requests, and that key stretching may make it easier to run a
-    Denial of Service (DoS) attack on your website. Use key stretching anyway,
-    and start from a concrete cost rather than guessing:
-</p>
-
-<ul>
-    <li><b>Argon2id</b> &mdash; at least 19 MiB of memory, 2 iterations, and 1
-    degree of parallelism.</li>
-    <li><b>bcrypt</b> &mdash; a cost factor of 10 or more.</li>
-    <li><b>scrypt</b> &mdash; at least N=2^17, r=8, p=1.</li>
-    <li><b>PBKDF2-HMAC-SHA256</b> &mdash; at least 600,000 iterations.</li>
-</ul>
-
-<p>
-    Those are floors, not targets. Measure on your own hardware and raise them
-    until a single hash takes as long as you can afford &mdash; a few hundred
-    milliseconds is typical for a login form. The denial of service threat can
-    be reduced by rate limiting authentication attempts per account and per
-    source address. Always design your system so that the cost parameters can be
-    increased later, and so that stored hashes record the parameters they were
-    made with.
-</p>
-
-<p>
-    Do not move the key stretching into the user's browser to save server time.
-    The browser has no secret to salt with &mdash; the only value it reliably
-    knows is the username, and a username is public, guessable, and shared
-    across sites, which is exactly the salt this article tells you not to use.
-    Whatever the client computes also becomes, in effect, the password: anyone
-    who captures it can replay it without ever knowing the real one. If you
-    cannot afford the cost on your own servers, lower it deliberately and rate
-    limit, rather than moving the work somewhere you cannot trust the inputs.
-</p>
 
 <h3>Impossible-to-crack Hashes: Keyed Hashes and Password Hashing Hardware</h3>
 
